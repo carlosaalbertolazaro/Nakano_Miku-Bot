@@ -25,19 +25,6 @@
 
 ---
 
-## 📋 Contenido
-
-| Sección | Descripción |
-| :--- | :--- |
-| 📦 [Requisitos](#-requisitos-previos) | Herramientas necesarias para comenzar. |
-| 🚀 [Instalación](#-instalación-ejemplo-para-termux) | Guía de despliegue paso a paso. |
-| ⚙️ [Configuración](#-configuración-inicial) | Ajustes iniciales y personalización. |
-| ⭐ [Soporte](#-apoyo-al-proyecto) | Cómo apoyar el desarrollo del proyecto. |
-| 💬 [Comunidad](#-comunidad) | Enlaces a grupos y canales oficiales. |
-| 👤 [Créditos](#-créditos) | Información sobre el autor. |
-
----
-
 ## 📦 Requisitos previos
 
 | Herramienta | Descripción |
