@@ -3,29 +3,35 @@ import config from '../../config.js'
 import { askAI, MODEL_SMART, MODEL_FAST } from '../../lib/ai.js'
 import { aiCooldownCache, aiSpontaneousCooldownCache } from '../../lib/caches.js'
 
-// Charla conversacional con IA (Groq). Tres formas de activarla:
+// Charla conversacional con IA (Groq). Formas de activarla:
 // 1. Comando explícito .ai/.miku.
 // 2. Pasiva sin prefijo: por privado siempre, si te responden citando un
 //    mensaje de la propia Miku, o si la mencionan con @ en un grupo.
-// 3. Participación ESPONTÁNEA en grupos: de vez en cuando, sin que nadie le
-//    hable directamente, puede sumar un comentario breve a la conversación
-//    — pensada para sentirse como una integrante más del chat, no como una
-//    asistente que solo responde si le preguntan. Se combinan 2 frenos:
-//    probabilidad por mensaje + cooldown por GRUPO (no por usuario), y el
-//    propio modelo puede "elegir" no decir nada (token NOPE) si no pega
-//    meterse.
-// 4. Modo CONSTANTE (.iamodo on, por grupo, ver GroupDb.aiConstantMode): en
-//    vez de la participación ocasional de arriba, responde casi todos los
-//    mensajes del grupo, sin poder "elegir" quedarse callada (sin NOPE) y
-//    con un cooldown mucho más corto (solo para no reventar la API con
-//    ráfagas de mensajes seguidos). Al desactivarlo vuelve al modo
-//    espontáneo normal.
+// 3. Participación pasiva en grupo (ver GroupDb.aiMode, toggle con
+//    .iamodo): sin que nadie le hable directamente, según el modo elegido
+//    por el grupo —
+//      - 'normal' (default): de vez en cuando, con probabilidad + cooldown
+//        por grupo, y puede "elegir" no decir nada (token NOPE) si no pega
+//        meterse.
+//      - 'constante': responde casi todo, sin poder quedarse callada, con
+//        un cooldown corto solo para no reventar la API con ráfagas.
+//      - 'silencio': nunca participa por su cuenta, solo si le hablan
+//        directo (mención/reply/comando/DM, ya cubierto arriba).
+//    En 'normal' y 'constante' se ignoran los mensajes sin texto real
+//    (solo emojis/signos) vía esTextoRelevante().
 const MAX_HISTORY_TURNS = 6 // 6 idas y vueltas (12 entradas: usuario+modelo)
 const MAX_CONTEXT_MESSAGES = 6 // mensajes recientes del grupo que se le dan de contexto (achicado para no comerse el límite de tokens/minuto de Groq)
 const MAX_CONTEXT_LINE_LENGTH = 200 // trunca mensajes larguísimos antes de meterlos en el contexto
-const SPONTANEOUS_CHANCE = 0.15 // 15% de probabilidad por mensaje "elegible" en modo normal
+const SPONTANEOUS_CHANCE = 0.10 // 10% de probabilidad por mensaje "elegible" en modo normal
 const SPONTANEOUS_MIN_LENGTH = 8 // ignora mensajes muy cortos (evita ruido tipo "jaja", "ok")
 const CONSTANT_MODE_COOLDOWN_SEC = 4 // solo para no disparar 2 respuestas por mensajes casi simultáneos
+
+// "Relevante" = tiene al menos una letra de verdad. Filtra mensajes de solo
+// emojis/stickers/signos de puntuación (👍, 😂😂😂, "...") que antes también
+// disparaban una respuesta espontánea sin decir nada real.
+function esTextoRelevante(text) {
+  return /\p{L}/u.test(text)
+}
 
 const conversations = new Map() // jid -> [{role:'user'|'assistant', content}] — historial 1:1 de cada persona con Miku
 const groupHistory = new Map()  // chat -> [{name, text}] — últimos mensajes del grupo, solo contexto
@@ -130,9 +136,15 @@ handler.all = async function (m, { conn, groupDb }) {
   if (groupDb?.disabledCategories?.includes('ia')) return
   if (!body.trim()) return
 
-  // Modo constante (.iamodo on): responde casi todo, sin poder decidir
-  // quedarse callada, con un cooldown corto solo anti-ráfaga.
-  if (groupDb?.aiConstantMode === true) {
+  const modo = groupDb?.aiMode || 'normal'
+  if (modo === 'silencio') return // solo responde si le hablan directo — ya se resolvió más arriba
+
+  const texto = body.trim()
+  if (!esTextoRelevante(texto)) return // sin letras de verdad (solo emojis/signos) — nada que comentar
+
+  // Modo constante (.iamodo constante): responde casi todo, sin poder
+  // decidir quedarse callada, con un cooldown corto solo anti-ráfaga.
+  if (modo === 'constante') {
     if (aiSpontaneousCooldownCache.has(m.chat)) return
     aiSpontaneousCooldownCache.set(m.chat, true, CONSTANT_MODE_COOLDOWN_SEC)
 
@@ -144,8 +156,8 @@ handler.all = async function (m, { conn, groupDb }) {
     return responder(m, { rawText: body, apiPrompt, silent: false, model: MODEL_FAST })
   }
 
-  // Modo espontáneo normal: participación ocasional, puede "elegir" no decir nada.
-  if (body.trim().length < SPONTANEOUS_MIN_LENGTH) return
+  // Modo normal: participación ocasional, puede "elegir" no decir nada.
+  if (texto.length < SPONTANEOUS_MIN_LENGTH) return
   if (aiSpontaneousCooldownCache.has(m.chat)) return
   if (Math.random() > SPONTANEOUS_CHANCE) return
 
@@ -160,7 +172,7 @@ handler.all = async function (m, { conn, groupDb }) {
 }
 
 handler.help = ['ai <prompt>']
-handler.desc = 'Hablá con Miku (IA) — responde si le contestás un mensaje suyo, la mencionás, o le escribís por privado. En grupos también se suma sola a la charla de vez en cuando (ver .iamodo para que participe siempre).'
+handler.desc = 'Hablá con Miku (IA) — responde si le contestás un mensaje suyo, la mencionás, o le escribís por privado. Ver .iamodo para elegir si además participa sola en el grupo (normal/constante/silencio).'
 handler.tags = ['ia']
 handler.command = ['ai', 'miku']
 
