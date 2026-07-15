@@ -1,6 +1,6 @@
 import { jidNormalizedUser } from '@whiskeysockets/baileys'
 import config from '../../config.js'
-import { askAI } from '../../lib/ai.js'
+import { askAI, MODEL_SMART, MODEL_FAST } from '../../lib/ai.js'
 import { aiCooldownCache, aiSpontaneousCooldownCache } from '../../lib/caches.js'
 
 // Charla conversacional con IA (Groq). Tres formas de activarla:
@@ -55,7 +55,13 @@ function buildContextBlock(chat) {
   return `[Contexto reciente del grupo — no son mensajes tuyos, es solo para que sepas de qué se viene hablando]\n${lineas}\n\n`
 }
 
-async function responder(m, { rawText, apiPrompt, silent = false }) {
+// Nombre real de WhatsApp de quien escribe — se lo damos siempre a la IA
+// para que no tenga que adivinar (ni inventar) con quién está hablando.
+function senderLabel(m) {
+  return m.pushName?.trim() || 'esta persona (no tenés su nombre real, no inventes uno)'
+}
+
+async function responder(m, { rawText, apiPrompt, silent = false, model = MODEL_FAST }) {
   const jid = m.sender
   if (aiCooldownCache.has(jid)) return
 
@@ -65,7 +71,7 @@ async function responder(m, { rawText, apiPrompt, silent = false }) {
   aiCooldownCache.set(jid, true)
 
   try {
-    const respuesta = await askAI(apiPrompt || trimmed, getHistory(jid))
+    const respuesta = await askAI(apiPrompt || trimmed, getHistory(jid), model)
     if (silent && /^NOPE\b/i.test(respuesta.trim())) return // decidió no sumarse, no se manda nada
 
     pushHistory(jid, trimmed, respuesta)
@@ -77,10 +83,11 @@ async function responder(m, { rawText, apiPrompt, silent = false }) {
 }
 
 const handler = async (m, { text }) => {
+  const nombre = senderLabel(m)
   const apiPrompt = m.isGroup
-    ? `${buildContextBlock(m.chat)}Mensaje de ${m.pushName || 'alguien'}: ${text}`
-    : text
-  await responder(m, { rawText: text, apiPrompt })
+    ? `${buildContextBlock(m.chat)}${nombre} te escribe: ${text}`
+    : `${nombre} te escribe por privado: ${text}`
+  await responder(m, { rawText: text, apiPrompt, model: MODEL_SMART })
 }
 
 handler.all = async function (m, { conn, groupDb }) {
@@ -103,10 +110,11 @@ handler.all = async function (m, { conn, groupDb }) {
   const esDM = !m.isGroup
 
   if (esDM || esReplyAlBot || loMencionaron) {
+    const nombre = senderLabel(m)
     const apiPrompt = m.isGroup
-      ? `${buildContextBlock(m.chat)}${m.pushName || 'Alguien'} te habla directamente (te mencionó o te respondió): ${body}`
-      : body
-    return responder(m, { rawText: body, apiPrompt })
+      ? `${buildContextBlock(m.chat)}${nombre} te habla directamente (te mencionó o te respondió): ${body}`
+      : `${nombre} te escribe por privado: ${body}`
+    return responder(m, { rawText: body, apiPrompt, model: MODEL_SMART })
   }
 
   // A partir de acá: mensaje de grupo normal, nadie le habló a Miku directamente.
@@ -125,7 +133,7 @@ handler.all = async function (m, { conn, groupDb }) {
       `nadie te habló a vos directamente, pero estás en "modo charla" y siempre sumás algo (una gracia, ` +
       `una opinión corta, una reacción) a lo que se viene hablando. Respondé siempre, breve y natural.`
 
-    return responder(m, { rawText: body, apiPrompt, silent: false })
+    return responder(m, { rawText: body, apiPrompt, silent: false, model: MODEL_FAST })
   }
 
   // Modo espontáneo normal: participación ocasional, puede "elegir" no decir nada.
@@ -140,7 +148,7 @@ handler.all = async function (m, { conn, groupDb }) {
     `Si te parece natural sumar un comentario breve (una gracia, una opinión corta, algo que aporte a lo que se viene hablando), respondé eso. ` +
     `Si no tenés nada que aportar o no pega meterte ahora, respondé EXACTAMENTE la palabra NOPE y nada más.`
 
-  await responder(m, { rawText: body, apiPrompt, silent: true })
+  await responder(m, { rawText: body, apiPrompt, silent: true, model: MODEL_FAST })
 }
 
 handler.help = ['ai <prompt>']
