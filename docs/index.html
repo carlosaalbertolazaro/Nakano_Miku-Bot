@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Miku — Bot de WhatsApp</title>
+<meta name="description" content="Miku (Nakano Miku): bot de WhatsApp con economía, gacha de anime, Pokémon salvajes, cartas, casino, roleplay y un asistente con IA. Más de 200 comandos, gratis para tu grupo." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230a0e17'/%3E%3Crect x='6' y='2' width='4' height='2' fill='%2345dfcf'/%3E%3Crect x='4' y='4' width='8' height='6' fill='%2345dfcf'/%3E%3Crect x='4' y='10' width='2' height='2' fill='%2345dfcf'/%3E%3Crect x='10' y='10' width='2' height='2' fill='%2345dfcf'/%3E%3Crect x='6' y='6' width='1' height='1' fill='%230a0e17'/%3E%3Crect x='9' y='6' width='1' height='1' fill='%230a0e17'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* ---- tokens: identidad "gabinete arcade" (color de Nakano Miku = teal) ---- */
+    --ink: #0a0e17;
+    --paper: #121a2b;
+    --paper-2: #182338;
+    --line: #263352;
+    --accent: #45dfcf;
+    --accent-2: #ff5d8f;
+    --text: #eef2f7;
+    --text-lo: color-mix(in srgb, var(--text) 60%, var(--ink));
+    --shadow-hard: 4px 4px 0 0 var(--ink);
+    --radius: 10px;
+    --maxw: 1120px;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --ink: #eef2f7;
+      --paper: #ffffff;
+      --paper-2: #f4f7fb;
+      --line: #d7dfeb;
+      --accent: #0f8f86;
+      --accent-2: #c93868;
+      --text: #10151f;
+      --text-lo: color-mix(in srgb, var(--text) 55%, var(--ink));
+      --shadow-hard: 4px 4px 0 0 var(--line);
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink: #0a0e17; --paper: #121a2b; --paper-2: #182338; --line: #263352;
+    --accent: #45dfcf; --accent-2: #ff5d8f; --text: #eef2f7;
+    --text-lo: color-mix(in srgb, var(--text) 60%, var(--ink));
+    --shadow-hard: 4px 4px 0 0 var(--ink);
+    color-scheme: dark;
+  }
+  :root[data-theme="light"]{
+    --ink: #eef2f7; --paper: #ffffff; --paper-2: #f4f7fb; --line: #d7dfeb;
+    --accent: #0f8f86; --accent-2: #c93868; --text: #10151f;
+    --text-lo: color-mix(in srgb, var(--text) 55%, var(--ink));
+    --shadow-hard: 4px 4px 0 0 var(--line);
+    color-scheme: light;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce){ html{ scroll-behavior: auto; } }
+
+  body{
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .pixel{ font-family: 'Press Start 2P', ui-monospace, monospace; letter-spacing: 0.5px; }
+  .mono{ font-family: ui-monospace, "Cascadia Code", "Roboto Mono", monospace; }
+
+  a{ color: var(--accent); }
+  a:focus-visible, button:focus-visible, .btn:focus-visible{
+    outline: 3px solid var(--accent-2);
+    outline-offset: 3px;
+  }
+
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  section{ padding: 88px 0; }
+  h1, h2, h3{ text-wrap: balance; margin: 0; }
+
+  /* ---------- scanline atmosphere ---------- */
+  .crt-overlay{
+    pointer-events: none;
+    position: fixed; inset: 0; z-index: 999;
+    background: repeating-linear-gradient(
+      to bottom, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px,
+      transparent 1px, transparent 3px
+    );
+    mix-blend-mode: overlay;
+    opacity: 0.5;
+  }
+  @media (prefers-color-scheme: light){ .crt-overlay{ opacity: 0.15; } }
+  :root[data-theme="light"] .crt-overlay{ opacity: 0.15; }
+
+  /* ---------- nav ---------- */
+  header{
+    position: sticky; top: 0; z-index: 100;
+    background: color-mix(in srgb, var(--ink) 88%, transparent);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav.wrap{ display:flex; align-items:center; justify-content:space-between; padding-top:16px; padding-bottom:16px; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:800; font-size:1.15rem; }
+  .brand-mark{ width:28px; height:28px; display:block; image-rendering: pixelated; }
+  .navlinks{ display:flex; gap:28px; list-style:none; margin:0; padding:0; }
+  .navlinks a{ color: var(--text-lo); text-decoration:none; font-weight:600; font-size:0.95rem; }
+  .navlinks a:hover{ color: var(--accent); }
+  @media (max-width: 640px){ .navlinks{ display:none; } }
+
+  .btn{
+    display:inline-block;
+    font-family:'Manrope', sans-serif; font-weight:800; font-size:0.95rem;
+    text-decoration:none; cursor:pointer; border:2px solid var(--ink);
+    padding:13px 26px; border-radius:6px;
+    background: var(--accent); color: var(--ink);
+    box-shadow: var(--shadow-hard);
+    transition: transform 0.12s ease;
+  }
+  .btn:hover{ transform: translate(-2px,-2px); box-shadow: 6px 6px 0 0 var(--ink); }
+  .btn:active{ transform: translate(1px,1px); box-shadow: 2px 2px 0 0 var(--ink); }
+  .btn.ghost{ background: transparent; color: var(--text); border-color: var(--line); box-shadow:none; }
+  .btn.ghost:hover{ border-color: var(--accent); color: var(--accent); transform:none; box-shadow:none; }
+  .btn.pink{ background: var(--accent-2); }
+
+  /* ---------- hero: "pantalla de inicio" ---------- */
+  .hero{ padding: 96px 0 72px; text-align:center; position:relative; }
+  .eyebrow{
+    display:inline-block; font-size:0.65rem; color: var(--accent);
+    border:1px solid var(--line); padding:6px 12px; border-radius:4px; margin-bottom:28px;
+    background: var(--paper);
+  }
+  .hero h1{ font-size: clamp(2rem, 5vw, 3.4rem); font-weight:800; line-height:1.15; }
+  .hero h1 .accent{ color: var(--accent); }
+  .hero p.lede{ max-width:560px; margin:22px auto 0; color: var(--text-lo); font-size:1.08rem; }
+  .hero-ctas{ display:flex; gap:16px; justify-content:center; margin-top:36px; flex-wrap:wrap; }
+
+  .blink{ animation: blink 1.1s steps(1) infinite; }
+  @media (prefers-reduced-motion: reduce){ .blink{ animation:none; } }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  /* fake WhatsApp bubble — mockup real del estilo de mensajes del bot */
+  .mockup{
+    max-width: 420px; margin: 56px auto 0; text-align:left;
+    background: var(--paper); border:1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow-hard); overflow:hidden;
+  }
+  .mockup-bar{ display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--line); }
+  .mockup-bar span{ width:9px; height:9px; border-radius:50%; background: var(--line); display:block; }
+  .mockup-body{ padding: 18px 16px; }
+  .bubble{
+    background: var(--paper-2); border:1px solid var(--line); border-radius: 4px;
+    padding: 12px 14px; font-size:0.83rem; white-space:pre-wrap;
+  }
+  .mono.bubble{ color: var(--text-lo); }
+  .bubble b{ color: var(--accent); }
+
+  /* ---------- stat strip ---------- */
+  .stats{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); background: var(--paper); }
+  .stats .wrap{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; padding: 40px 24px; }
+  .stat{ text-align:center; }
+  .stat .n{ font-family:'Press Start 2P', monospace; font-size:1.5rem; color:var(--accent); display:block; margin-bottom:8px; }
+  .stat .l{ color: var(--text-lo); font-size:0.85rem; }
+  @media (max-width:640px){ .stats .wrap{ grid-template-columns:1fr; } }
+
+  /* ---------- section heads ---------- */
+  .section-head{ max-width:640px; margin: 0 0 48px; }
+  .section-head .eyebrow{ margin-bottom:16px; }
+  .section-head h2{ font-size: clamp(1.6rem, 3.5vw, 2.2rem); font-weight:800; }
+  .section-head p{ color: var(--text-lo); margin-top:12px; }
+
+  /* ---------- cartridges (features) ---------- */
+  .cart-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  @media (max-width:900px){ .cart-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .cart-grid{ grid-template-columns:1fr; } }
+  .cart{
+    background: var(--paper); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 22px; box-shadow: var(--shadow-hard);
+    transition: transform 0.15s ease;
+  }
+  .cart:hover{ transform: translateY(-4px); }
+  .cart .tag{ font-family:'Press Start 2P', monospace; font-size:0.6rem; color: var(--accent); display:block; margin-bottom:14px; }
+  .cart h3{ font-size:1.08rem; font-weight:800; margin-bottom:8px; }
+  .cart p{ color: var(--text-lo); font-size:0.92rem; margin:0; }
+  .cart .cmds{ margin-top:14px; display:flex; flex-wrap:wrap; gap:6px; }
+  .cart .cmds span{
+    font-family: ui-monospace, monospace; font-size:0.72rem; color: var(--text-lo);
+    border:1px solid var(--line); border-radius:4px; padding:2px 7px;
+  }
+
+  /* ---------- cómo empezar ---------- */
+  .steps{ display:grid; grid-template-columns: repeat(3,1fr); gap:24px; }
+  @media (max-width:800px){ .steps{ grid-template-columns:1fr; } }
+  .step{ position:relative; padding-left:0; }
+  .step .num{
+    font-family:'Press Start 2P', monospace; font-size:0.75rem; color: var(--ink);
+    background: var(--accent); width:34px; height:34px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center; margin-bottom:16px;
+  }
+  .step h3{ font-size:1rem; font-weight:800; margin-bottom:6px; }
+  .step p{ color: var(--text-lo); font-size:0.9rem; margin:0; }
+
+  /* ---------- pricing: "save slots" ---------- */
+  .slots{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:760px){ .slots{ grid-template-columns:1fr; } }
+  .slot{
+    background: var(--paper); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 32px 28px; box-shadow: var(--shadow-hard); position:relative;
+  }
+  .slot.premium{ border-color: var(--accent-2); }
+  .slot .badge{
+    position:absolute; top:-13px; right:24px;
+    font-family:'Press Start 2P', monospace; font-size:0.55rem;
+    background: var(--accent-2); color:#1a0812; padding:6px 10px; border-radius:4px;
+  }
+  .slot .slot-label{ font-family:'Press Start 2P', monospace; font-size:0.62rem; color: var(--text-lo); display:block; margin-bottom:18px; }
+  .slot .price{ font-size:2.1rem; font-weight:800; margin-bottom:4px; }
+  .slot .price small{ font-size:1rem; color: var(--text-lo); font-weight:600; }
+  .slot .note{ color: var(--text-lo); font-size:0.82rem; margin-bottom:24px; }
+  .slot ul{ list-style:none; margin:0 0 28px; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .slot li{ font-size:0.92rem; display:flex; gap:10px; align-items:flex-start; }
+  .slot li .ok{ color: var(--accent); flex-shrink:0; }
+  .slot.premium li .ok{ color: var(--accent-2); }
+  #paypal-slot{ min-height: 46px; }
+  .paypal-note{ font-size:0.78rem; color: var(--text-lo); margin-top:12px; }
+
+  /* ---------- contacto ---------- */
+  .contact-card{
+    background: var(--paper); border:1px dashed var(--line); border-radius: var(--radius);
+    padding: 30px; text-align:center;
+  }
+  .contact-card p{ color: var(--text-lo); margin: 10px 0 22px; }
+
+  /* ---------- credits/footer ---------- */
+  footer{ border-top:1px solid var(--line); padding: 48px 0; text-align:center; }
+  footer .pixel{ font-size:0.65rem; color: var(--text-lo); line-height:2.4; }
+  footer .pixel b{ color: var(--accent); }
+
+  [data-reveal]{ opacity:1; transform:none; }
+  @media (prefers-reduced-motion: no-preference){
+    [data-reveal]{ opacity:0; transform: translateY(14px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    [data-reveal].in{ opacity:1; transform:none; }
+  }
+</style>
+</head>
+<body>
+<div class="crt-overlay" aria-hidden="true"></div>
+
+<header>
+  <nav class="wrap">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="16" height="16" style="fill:var(--ink)"/>
+        <rect x="6" y="2" width="4" height="2" style="fill:var(--accent)"/>
+        <rect x="4" y="4" width="8" height="6" style="fill:var(--accent)"/>
+        <rect x="4" y="10" width="2" height="2" style="fill:var(--accent)"/>
+        <rect x="10" y="10" width="2" height="2" style="fill:var(--accent)"/>
+        <rect x="6" y="6" width="1" height="1" style="fill:var(--ink)"/>
+        <rect x="9" y="6" width="1" height="1" style="fill:var(--ink)"/>
+      </svg>
+      Miku
+    </div>
+    <ul class="navlinks">
+      <li><a href="#funciones">Funciones</a></li>
+      <li><a href="#empezar">Cómo empezar</a></li>
+      <li><a href="#precios">Precios</a></li>
+    </ul>
+    <a class="btn" href="#contacto" style="padding:9px 18px; font-size:0.85rem;">Sumar a mi grupo</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow pixel">NAKANO MIKU · v1.0.0</span>
+      <h1>El bot que convierte tu grupo de WhatsApp en <span class="accent">una partida</span> que nunca termina.</h1>
+      <p class="lede">Economía con niveles, gacha de anime, Pokémon salvajes, cartas, casino y un asistente con IA que participa en la charla — más de 200 comandos, corriendo 24/7.</p>
+      <div class="hero-ctas">
+        <a href="#contacto" class="btn">▶ Sumar a mi grupo</a>
+        <a href="#funciones" class="btn ghost">Ver todas las funciones</a>
+      </div>
+
+      <div class="mockup" data-reveal>
+        <div class="mockup-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="mockup-body">
+          <div class="bubble mono">┏━━•❈ 🎮 <b>MIKU MENU</b> ❈•━━┓
+
+💰 Economía   🌸 Anime
+🐾 Pokémon    🃏 Cartas
+🎰 Casino     💞 Roleplay
+🤖 IA         🛡️ Moderación
+
+┗━━━━•❅•°•❈•°•❅•━━━━┛<span class="blink">▊</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="stats">
+    <div class="wrap">
+      <div class="stat"><span class="n">200+</span><span class="l">comandos activos</span></div>
+      <div class="stat"><span class="n">10</span><span class="l">módulos distintos</span></div>
+      <div class="stat"><span class="n">24/7</span><span class="l">siempre despierta</span></div>
+    </div>
+  </div>
+
+  <section id="funciones">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow pixel">SELECCIONÁ TU MODO</span>
+        <h2>Diez sistemas completos, un solo bot.</h2>
+        <p>Cada módulo se puede prender o apagar por grupo — activá solo lo que tu comunidad quiere usar.</p>
+      </div>
+      <div class="cart-grid">
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 01</span>
+          <h3>🤖 Asistente con IA</h3>
+          <p>Charlá con Miku (Gemini) por privado, mencionándola o citando su mensaje — y a veces se suma sola a la conversación del grupo, sin que nadie le hable.</p>
+          <div class="cmds"><span>.ai</span><span>.miku</span><span>.iamodo</span></div>
+        </div>
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 02</span>
+          <h3>💰 Economía y Niveles</h3>
+          <p>XP por chatear, tarjeta de rango visual, recompensa diaria, transferencias entre usuarios y tabla de líderes del grupo.</p>
+          <div class="cmds"><span>.rank</span><span>.daily</span><span>.pay</span><span>.topxp</span></div>
+        </div>
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 03</span>
+          <h3>🌸 Gacha de Anime</h3>
+          <p>Invocá personajes reales de anime al estilo Mudae, coleccionalos en tu harem y vendé los que no querés.</p>
+          <div class="cmds"><span>.gacha</span><span>.claim</span><span>.harem</span></div>
+        </div>
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 04</span>
+          <h3>🐾 Pokémon salvajes</h3>
+          <p>Aparecen solos mientras el grupo charla — adiviná la silueta y atrapalos antes que nadie.</p>
+          <div class="cmds"><span>.catch</span><span>.pokedex</span></div>
+        </div>
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 05</span>
+          <h3>🃏 Cartas (Yu-Gi-Oh)</h3>
+          <p>Abrí sobres, armá tu mazo y vendé las cartas repetidas por monedas.</p>
+          <div class="cmds"><span>.sobre</span><span>.deck</span></div>
+        </div>
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 06</span>
+          <h3>🎰 Casino</h3>
+          <p>Tragamonedas, ruleta, blackjack y cara-o-cruz — apostá las monedas que ganaste en el resto del bot.</p>
+          <div class="cmds"><span>.slots</span><span>.blackjack</span><span>.ruleta</span></div>
+        </div>
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 07</span>
+          <h3>💞 Roleplay</h3>
+          <p>Más de 40 acciones con GIFs reales para interactuar con tus amigos: abrazar, chocar los cinco, molestar y mucho más.</p>
+          <div class="cmds"><span>.abrazo</span><span>.beso</span><span>.patear</span></div>
+        </div>
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 08</span>
+          <h3>🎮 Minijuegos y Torneos</h3>
+          <p>Trivia con premio, torneos relámpago con bracket automático, ruleta rusa y matchmaking de squads para jugar.</p>
+          <div class="cmds"><span>.trivia</span><span>.torneo</span><span>.lobby</span></div>
+        </div>
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 09</span>
+          <h3>🛡️ Moderación</h3>
+          <p>Anti-link, sistema de warns, verificación anti-raid para nuevos miembros y buzón de confesiones anónimas.</p>
+          <div class="cmds"><span>.antilink</span><span>.verify</span><span>.warn</span></div>
+        </div>
+        <div class="cart" data-reveal>
+          <span class="tag">MÓDULO 10</span>
+          <h3>🌐 Conectividad</h3>
+          <p>Canales que conectan varios grupos por tema, traductor, identificador de anime por imagen y eventos con recordatorio.</p>
+          <div class="cmds"><span>.canal</span><span>.salsa</span><span>.evento</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="empezar">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow pixel">INSERTAR FICHA</span>
+        <h2>Empezar te lleva un minuto.</h2>
+      </div>
+      <div class="steps">
+        <div class="step" data-reveal>
+          <span class="num pixel">1</span>
+          <h3>Sumás a Miku</h3>
+          <p>Un admin agrega el número del bot al grupo de WhatsApp.</p>
+        </div>
+        <div class="step" data-reveal>
+          <span class="num pixel">2</span>
+          <h3>Escribís .menu</h3>
+          <p>Vas a ver los 10 módulos y podés activar o desactivar los que quieras.</p>
+        </div>
+        <div class="step" data-reveal>
+          <span class="num pixel">3</span>
+          <h3>Listo</h3>
+          <p>Tu grupo ya tiene economía, gacha, casino, IA y todo lo demás, corriendo solo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="precios">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow pixel">GUARDAR PARTIDA</span>
+        <h2>Gratis para siempre. Premium para bancar el proyecto.</h2>
+        <p>Hoy, todos los módulos de arriba están disponibles gratis en cualquier grupo — sin límite de tiempo ni tarjeta.</p>
+      </div>
+      <div class="slots">
+        <div class="slot" data-reveal>
+          <span class="slot-label pixel">SLOT A</span>
+          <div class="price">Gratis</div>
+          <div class="note">Para siempre, sin letra chica.</div>
+          <ul>
+            <li><span class="ok">✓</span> Los 10 módulos completos</li>
+            <li><span class="ok">✓</span> Sin límite de grupos ni de miembros</li>
+            <li><span class="ok">✓</span> Actualizaciones incluidas</li>
+          </ul>
+          <a href="#contacto" class="btn ghost" style="width:100%; text-align:center;">Empezar gratis</a>
+        </div>
+        <div class="slot premium" data-reveal>
+          <span class="badge pixel">RARO ✦</span>
+          <span class="slot-label pixel">SLOT B — PREMIUM</span>
+          <div class="price">$ <small>USD / mes — precio a confirmar</small></div>
+          <div class="note">Para quienes quieren bancar el desarrollo de Miku.</div>
+          <ul>
+            <li><span class="ok">✦</span> Acceso anticipado a funciones nuevas</li>
+            <li><span class="ok">✦</span> Prioridad si pedís una función para tu grupo</li>
+            <li><span class="ok">✦</span> Ayudás a que Miku siga creciendo</li>
+          </ul>
+          <div id="paypal-slot"></div>
+          <p class="paypal-note">Pago procesado por PayPal. Los beneficios exclusivos por grupo (cooldowns, comandos extra) están en camino.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contacto">
+    <div class="wrap">
+      <div class="contact-card" data-reveal>
+        <span class="eyebrow pixel">1 JUGADOR</span>
+        <h2 style="font-size:1.5rem;">¿Querés sumar a Miku a tu grupo?</h2>
+        <p>Escribile directo a Carlos por WhatsApp y te la agrega.</p>
+        <a class="btn pink" href="https://wa.me/549XXXXXXXXXX" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap pixel">
+    <p><b>MIKU</b> — un proyecto de Carlos</p>
+    <p>NAKANO MIKU © — hecha con cariño para tu grupo</p>
+  </div>
+</footer>
+
+<!--
+  ════════════════════════════════════════════════════════════
+  COSAS PARA COMPLETAR ANTES DE PUBLICAR (buscá estos 3 puntos):
+
+  1. Botón de WhatsApp (sección #contacto, más arriba):
+     reemplazá "549XXXXXXXXXX" por tu número real con código de país,
+     sin el +, ej: https://wa.me/5491122334455
+
+  2. Botón de PayPal (más abajo en este script): reemplazá
+     TU_PAYPAL_CLIENT_ID y TU_PAYPAL_PLAN_ID. Se consiguen en
+     developer.paypal.com (creás una app ahí) y en tu cuenta Business
+     de paypal.com (Products > Subscriptions, creás un plan con el
+     precio real que quieras cobrar).
+
+  3. Precio del slot Premium (sección #precios): buscá
+     "USD / mes — precio a confirmar" y poné el número real.
+  ════════════════════════════════════════════════════════════
+-->
+
+<script src="https://www.paypal.com/sdk/js?client-id=TU_PAYPAL_CLIENT_ID&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+<script>
+  if (window.paypal && document.getElementById('paypal-slot')) {
+    paypal.Buttons({
+      style: { shape: 'rect', color: 'black', layout: 'vertical', label: 'subscribe' },
+      createSubscription: function (data, actions) {
+        return actions.subscription.create({ plan_id: 'TU_PAYPAL_PLAN_ID' });
+      },
+      onApprove: function (data) {
+        alert('¡Gracias por tu apoyo! ID de suscripción: ' + data.subscriptionID);
+      }
+    }).render('#paypal-slot');
+  }
+
+  // Scroll-reveal simple, respeta prefers-reduced-motion (los estilos de
+  // [data-reveal] ya quedan neutralizados por CSS si el usuario lo pidió).
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('[data-reveal]').forEach(function (el) { obs.observe(el); });
+  }
+</script>
+</body>
+</html>
