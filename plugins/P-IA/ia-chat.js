@@ -7,17 +7,24 @@ import { aiCooldownCache, aiSpontaneousCooldownCache } from '../../lib/caches.js
 // 1. Comando explícito .ai/.miku/.gemini.
 // 2. Pasiva sin prefijo: por privado siempre, si te responden citando un
 //    mensaje de la propia Miku, o si la mencionan con @ en un grupo.
-// 3. Participación ESPONTÁNEA en grupos (nueva): de vez en cuando, sin que
-//    nadie le hable directamente, puede sumar un comentario breve a la
-//    conversación — pensada para sentirse como una integrante más del chat,
-//    no como una asistente que solo responde si le preguntan. Para que no
-//    sea invasiva se combinan 3 frenos: probabilidad baja por mensaje,
-//    cooldown largo por GRUPO (no por usuario), y que el propio modelo
-//    puede "elegir" no decir nada (token NOPE) si no pega meterse.
+// 3. Participación ESPONTÁNEA en grupos: de vez en cuando, sin que nadie le
+//    hable directamente, puede sumar un comentario breve a la conversación
+//    — pensada para sentirse como una integrante más del chat, no como una
+//    asistente que solo responde si le preguntan. Se combinan 2 frenos:
+//    probabilidad por mensaje + cooldown por GRUPO (no por usuario), y el
+//    propio modelo puede "elegir" no decir nada (token NOPE) si no pega
+//    meterse.
+// 4. Modo CONSTANTE (.iamodo on, por grupo, ver GroupDb.aiConstantMode): en
+//    vez de la participación ocasional de arriba, responde casi todos los
+//    mensajes del grupo, sin poder "elegir" quedarse callada (sin NOPE) y
+//    con un cooldown mucho más corto (solo para no reventar la API con
+//    ráfagas de mensajes seguidos). Al desactivarlo vuelve al modo
+//    espontáneo normal.
 const MAX_HISTORY_TURNS = 6 // 6 idas y vueltas (12 entradas: usuario+modelo)
 const MAX_CONTEXT_MESSAGES = 12 // mensajes recientes del grupo que se le dan de contexto
-const SPONTANEOUS_CHANCE = 0.04 // 4% de probabilidad por mensaje "elegible"
-const SPONTANEOUS_MIN_LENGTH = 12 // ignora mensajes muy cortos (evita ruido tipo "jaja", "ok")
+const SPONTANEOUS_CHANCE = 0.15 // 15% de probabilidad por mensaje "elegible" en modo normal
+const SPONTANEOUS_MIN_LENGTH = 8 // ignora mensajes muy cortos (evita ruido tipo "jaja", "ok")
+const CONSTANT_MODE_COOLDOWN_SEC = 4 // solo para no disparar 2 respuestas por mensajes casi simultáneos
 
 const conversations = new Map() // jid -> [{role, parts}] — historial 1:1 de cada persona con Miku
 const groupHistory = new Map()  // chat -> [{name, text}] — últimos mensajes del grupo, solo contexto
@@ -103,9 +110,25 @@ handler.all = async function (m, { conn, groupDb }) {
   }
 
   // A partir de acá: mensaje de grupo normal, nadie le habló a Miku directamente.
-  // Posible participación espontánea, muy poco frecuente a propósito.
   if (!m.isGroup) return
   if (groupDb?.disabledCategories?.includes('ia')) return
+  if (!body.trim()) return
+
+  // Modo constante (.iamodo on): responde casi todo, sin poder decidir
+  // quedarse callada, con un cooldown corto solo anti-ráfaga.
+  if (groupDb?.aiConstantMode === true) {
+    if (aiSpontaneousCooldownCache.has(m.chat)) return
+    aiSpontaneousCooldownCache.set(m.chat, true, CONSTANT_MODE_COOLDOWN_SEC)
+
+    const apiPrompt = `${buildContextBlock(m.chat)}` +
+      `Estás participando activamente de esta conversación grupal como una integrante más del chat — ` +
+      `nadie te habló a vos directamente, pero estás en "modo charla" y siempre sumás algo (una gracia, ` +
+      `una opinión corta, una reacción) a lo que se viene hablando. Respondé siempre, breve y natural.`
+
+    return responder(m, { rawText: body, apiPrompt, silent: false })
+  }
+
+  // Modo espontáneo normal: participación ocasional, puede "elegir" no decir nada.
   if (body.trim().length < SPONTANEOUS_MIN_LENGTH) return
   if (aiSpontaneousCooldownCache.has(m.chat)) return
   if (Math.random() > SPONTANEOUS_CHANCE) return
@@ -121,7 +144,7 @@ handler.all = async function (m, { conn, groupDb }) {
 }
 
 handler.help = ['ai <prompt>']
-handler.desc = 'Hablá con Miku (Gemini AI) — responde si le contestás un mensaje suyo, la mencionás, o le escribís por privado. En grupos, a veces también se suma sola a la charla.'
+handler.desc = 'Hablá con Miku (Gemini AI) — responde si le contestás un mensaje suyo, la mencionás, o le escribís por privado. En grupos también se suma sola a la charla de vez en cuando (ver .iamodo para que participe siempre).'
 handler.tags = ['ia']
 handler.command = ['ai', 'miku', 'gemini']
 
