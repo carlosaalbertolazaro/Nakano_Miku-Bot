@@ -117,18 +117,28 @@ function isSpamming(jid) {
 function getAdminStatus(participants, jid) {
   if (!jid || !participants?.length) return false
   const clean = jidNorm(jid)
-  const cleanNum = extraerNum(jid)
+  // normalizarNum saca el "1" extra de números viejos de MX/AR
+  // (521XXXXXXXXXX -> 52XXXXXXXXXX) — confirmado con un caso real donde el
+  // sender venía como 5219614507741 (con el 1 de más) y por eso no
+  // matcheaba contra el número real del participante.
+  const cleanNum = normalizarNum(extraerNum(jid))
   return participants.some(p => {
     // WhatsApp viene migrando cuentas a identificadores @lid (privados, no
     // ligados al número de teléfono) en paralelo a los @s.whatsapp.net de
     // siempre — el mismo participante puede aparecer con formatos distintos
-    // según de dónde salga el JID. Comparamos por id, por lid, y como último
-    // recurso por los dígitos del número (cuando ambos lados son numéricos).
+    // según de dónde salga el JID. Confirmado con un caso real: el grupo
+    // puede tener participantes puramente @lid sin ningún campo .lid
+    // secundario, pero Baileys a veces expone el número real por separado en
+    // p.phoneNumber (mismo campo que ya usa grupo-actividad.js para esto
+    // mismo) — sin ese campo, un @lid puro no tiene forma de cruzarse contra
+    // un JID de teléfono, así que también lo comparamos acá.
+    const phoneNum = p.phoneNumber ? normalizarNum(extraerNum(p.phoneNumber)) : null
     const matched =
       jidNorm(p.id) === clean ||
       (p.lid && jidNorm(p.lid) === clean) ||
-      (cleanNum && extraerNum(p.id) === cleanNum) ||
-      (cleanNum && p.lid && extraerNum(p.lid) === cleanNum)
+      (cleanNum && normalizarNum(extraerNum(p.id)) === cleanNum) ||
+      (cleanNum && p.lid && normalizarNum(extraerNum(p.lid)) === cleanNum) ||
+      (cleanNum && phoneNum && phoneNum === cleanNum)
     return matched && (p.admin === 'admin' || p.admin === 'superadmin' || p.isCommunityAdmin)
   })
 }
@@ -297,7 +307,10 @@ export async function handler(conn, m) {
     console.log(chalk.bold.bgYellow.black(' [ADMIN CHECK FALLÓ] '))
     console.log(chalk.yellow(`  m.sender: ${m.sender}`))
     console.log(chalk.yellow(`  m.author: ${m.author}`))
-    console.log(chalk.yellow(`  participantes: ${JSON.stringify(participants.map(p => ({ id: p.id, lid: p.lid, admin: p.admin })))}`))
+    // Objeto CRUDO y completo (no filtrado) — si el fix con phoneNumber sigue
+    // sin andar, esto muestra TODOS los campos que realmente manda Baileys
+    // para poder encontrar la posta sin adivinar de nuevo.
+    console.log(chalk.yellow(`  participantes (crudo): ${JSON.stringify(participants)}`))
     return m.reply(`*『 👤 』SOLO ADMINS.*\n> @${userTag}, necesitás ser admin para usar este comando.`)
   }
   if (plugin.botAdminOnly && !esBotAdmin) return m.reply(`*『 🤖 』BOT SIN PERMISOS.*\n> @${userTag}, hacé al bot administrador para usar esto.`)

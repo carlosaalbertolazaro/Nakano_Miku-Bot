@@ -55,8 +55,9 @@ async function rollCharacter(m, { conn, groupDb }) {
     `> ✨ *${character.name}*\n` +
     `> 📺 ${character.series}\n` +
     `> ${character.rarity.label}\n` +
-    `> 💖 ${character.favorites} favoritos en MyAnimeList\n\n` +
-    `> Escribí *.claim* para quedártelo — tenés *${Math.floor(CLAIM_WINDOW_MS / 1000)}s* antes de que se escape.`
+    `> 💖 ${character.favorites} favoritos en MyAnimeList\n` +
+    (character.fromCache ? `> _(Jikan no responde ahora — personaje del caché local)_\n` : '') +
+    `\n> Escribí *.claim* para quedártelo — tenés *${Math.floor(CLAIM_WINDOW_MS / 1000)}s* antes de que se escape.`
 
   try {
     if (character.image) {
