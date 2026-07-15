@@ -1,4 +1,5 @@
 import { fetchReactionGif, downloadReactionGifBuffer } from '../../lib/nekosbest.js'
+import { gifToMp4 } from '../../lib/gifToMp4.js'
 
 // Todas las acciones vienen de endpoints REALES y verificados de nekos.best
 // (GET /api/v2/endpoints), no inventados. Cada acción tiene un alias en
@@ -103,16 +104,20 @@ const handler = async (m, { conn, command }) => {
 
   let gif
   let gifBuffer = null
+  let mp4Buffer = null
   try {
     gif = await fetchReactionGif(action.endpoint)
     gifBuffer = await downloadReactionGifBuffer(gif.url)
+    // Un .gif real mandado como "video" no es un contenedor de video válido
+    // — WhatsApp lo muestra una vez pero no lo puede descargar/reproducir de
+    // nuevo. Se convierte a MP4 de verdad antes de mandarlo.
+    mp4Buffer = await gifToMp4(gifBuffer)
   } catch (e) {
     if (!gif) {
       return m.reply(`*『 ❌ 』ERROR*\n> No se pudo obtener el gif ahora mismo. Probá de nuevo en un rato.\n> _${e.message}_`)
     }
-    // Se consiguió el link pero falló la descarga — seguimos igual con la
-    // URL directa como último recurso (puede fallar de nuevo, pero es mejor
-    // intentarlo que no mandar nada).
+    // Se consiguió el link pero falló la descarga o la conversión — seguimos
+    // igual con lo que se pudo conseguir (mejor que no mandar nada).
   }
 
   const target = m.mentionedJid?.[0] || (m.quoted ? m.quoted.sender : null)
@@ -130,11 +135,16 @@ const handler = async (m, { conn, command }) => {
   const mentions = target ? [m.sender, target] : [m.sender]
 
   try {
-    // video + gifPlayback:true (no image) para que WhatsApp lo reproduzca
-    // animado en loop — un mensaje de imagen, aunque el archivo sea un gif
-    // real, siempre se muestra estático. Reusa el helper m.replyVideo que
-    // ya existía en el codebase para esto mismo.
-    await m.replyVideo(gifBuffer || { url: gif.url }, caption, true, { mentions })
+    if (mp4Buffer) {
+      // video + gifPlayback:true (mp4 de verdad) para que WhatsApp lo
+      // reproduzca animado en loop Y se pueda descargar. Reusa el helper
+      // m.replyVideo que ya existía en el codebase para esto mismo.
+      await m.replyVideo(mp4Buffer, caption, true, { mentions })
+    } else {
+      // No se pudo convertir a mp4 (¿ffmpeg no está instalado?) — mandamos
+      // como imagen estática en vez de nada.
+      await conn.sendMessage(m.chat, { image: gifBuffer || { url: gif.url }, caption, mentions }, { quoted: m })
+    }
   } catch {
     await m.reply(caption)
   }
