@@ -12,8 +12,8 @@ const handler = async (m, { conn }) => {
     return m.reply(`*『 ✙ 』SIN MEDIA.*\n> Enviá o respondé a una imagen o video.`)
   }
 
-  const packname = config.packname || 'ZΞN-BOT'
-  const author   = config.author || 'AXELDEV09'
+  const packname = config.packname || 'Miku'
+  const author   = config.author || 'Carlos'
 
   await m.reply(`*『 ⏳ 』Creando sticker...*`)
 

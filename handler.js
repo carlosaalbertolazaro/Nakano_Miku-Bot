@@ -203,25 +203,28 @@ export async function handler(conn, m) {
     config
   }
 
+  // Passive listeners (.all / .before+alwaysBefore) run on EVERY message that
+  // reaches this point, not just commands or button replies \u2014 this is what
+  // lets antilink (alwaysBefore) actually scan plain chat links, and what
+  // lets XP/activity trackers count real conversation instead of only
+  // bot-command usage.
+  for (const [nombre, plug] of Object.entries(plugins)) {
+    if (typeof plug.all === 'function') {
+      try { await plug.all.call(conn, m, ctx) }
+      catch (e) { console.error(chalk.bold.bgRed.white(` [ALL:${nombre}] `), chalk.bold.redBright(e.stack || e.message)) }
+    }
+    if (typeof plug.before === 'function' && plug.alwaysBefore) {
+      try { await plug.before(m, ctx) }
+      catch (e) { console.error(chalk.bold.bgRed.white(` [BEFORE:${nombre}] `), chalk.bold.redBright(e.stack || e.message)) }
+    }
+  }
+
   if (!esCmd && !esBotonRespuesta) return
 
   conn.readMessages([m.key]).catch(() => {})
   const sinPrefix = esCmd ? m.body.slice(prefixUsado.length).trim() : m.body.trim()
   let [cmd, ...args] = sinPrefix.split(/\s+/)
   cmd = (cmd || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-
-  if (esCmd || m.responseId) {
-    for (const [nombre, plug] of Object.entries(plugins)) {
-      if (typeof plug.all === 'function') {
-        try { await plug.all.call(conn, m, ctx) }
-        catch (e) { console.error(chalk.bold.bgRed.white(` [ALL:${nombre}] `), chalk.bold.redBright(e.stack || e.message)) }
-      }
-      if (typeof plug.before === 'function' && plug.alwaysBefore) {
-        try { await plug.before(m, ctx) }
-        catch (e) { console.error(chalk.bold.bgRed.white(` [BEFORE:${nombre}] `), chalk.bold.redBright(e.stack || e.message)) }
-      }
-    }
-  }
 
   let plugin = cmdMap.get(cmd)
   if (!plugin) {

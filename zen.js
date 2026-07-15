@@ -7,7 +7,7 @@ import readline from 'readline'
 import chalk from 'chalk'
 import config from './config.js'
 import { handler, loadPlugins, setupWatchers } from './handler.js'
-import { groupCache, msgRetryCache } from './lib/caches.js'
+import { msgRetryCache } from './lib/caches.js'
 
 const pkg = baileysMod.default && Object.keys(baileysMod).length === 1 ? baileysMod.default : baileysMod
 const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, Browsers } = pkg
@@ -116,15 +116,11 @@ async function startBot() {
 
   conn.ev.on('group-participants.update', async (data) => {
     try {
-      const GroupDb = (await import('./lib/database/GroupDb.js')).default
-      const groupDb = await GroupDb.findOrCreate(data.id)
-      const meta = await conn.groupMetadata(data.id).catch(() => null)
-      if (!meta) return
-
-      groupCache.set(data.id, meta)
-      const { welcomeModule } = await import('./plugins/welcome.js').catch(() => ({}))
-      if (welcomeModule) await welcomeModule(conn, data, meta, groupDb)
-    } catch {}
+      const { manejarParticipantes } = await import('./plugins/welcome.js')
+      await manejarParticipantes(conn, data)
+    } catch (e) {
+      console.error(chalk.bold.bgRed.white(' [WELCOME EVENT ERROR] '), chalk.bold.redBright(e.stack || e.message))
+    }
   })
 
   conn.ev.on('messages.upsert', async ({ messages, type }) => {

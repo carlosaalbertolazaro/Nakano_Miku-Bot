@@ -1,0 +1,20 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# Ejemplo de script de autoarranque para Termux:Boot.
+#
+# Instalación:
+#   1. Instalá la app "Termux:Boot" desde F-Droid (mismo store que Termux).
+#   2. Abrí Termux:Boot una vez para que cree ~/.termux/boot/.
+#   3. Copiá este archivo a ~/.termux/boot/miku.sh y dale permiso de ejecución:
+#        mkdir -p ~/.termux/boot
+#        cp scripts/termux-boot-miku.sh.example ~/.termux/boot/miku.sh
+#        chmod +x ~/.termux/boot/miku.sh
+#   4. Reiniciá el teléfono para probar — Miku debería levantar sola.
+#
+# Ajustá BOT_DIR si tu proyecto no está en la ruta por defecto.
+
+termux-wake-lock
+
+BOT_DIR="$HOME/miku-bot"
+cd "$BOT_DIR" || exit 1
+
+pm2 resurrect || pm2 start zen.js --name miku

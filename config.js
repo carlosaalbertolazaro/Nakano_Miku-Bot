@@ -1,6 +1,7 @@
 const config = {
-  botName: 'ZΞN-BOT',
-  ownerName: 'AXELDEV09',
+  botName: 'Miku',
+  botFullName: 'Nakano Miku',
+  ownerName: 'Carlos',
   version: '1.0.0',
   prefix: /^[.#/!]/,
   ownerNumber: ['549XXXXXXXXXX'],  // ← Cambia por tu número
@@ -12,9 +13,16 @@ const config = {
     ventanaMs: 8000,
     muteMs: 15000,
   },
-  groupLink: 'https://whatsapp.com/channel/XXXXXXXX',  // ← Cambia por tu canal
-  packname: 'ZΞN-BOT',
-  author: 'AXELDEV09',
+  groupLink: '',  // ← Tu canal/grupo de WhatsApp, cuando lo tengas
+  packname: 'Miku',
+  author: 'Carlos',
+  ai: {
+    geminiApiKey: process.env.GEMINI_API_KEY || null,
+  },
+  aternos: {
+    host: process.env.ATERNOS_SERVER_HOST || null,
+    port: process.env.ATERNOS_SERVER_PORT || null,
+  },
 }
 
 export default config

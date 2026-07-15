@@ -23,6 +23,10 @@ const ETIQUETAS = {
   descargas:     '📥 Descargas',
   convertidores: '🔄 Convertidores',
   juegos:        '🎮 Minijuegos',
+  economia:      '💰 Economía y Niveles',
+  anime:         '🌸 Anime y Gacha',
+  pokemon:       '🐾 Pokémon',
+  cartas:        '🃏 Cartas (Yu-Gi-Oh)',
   otros:         '📦 Otros',
 }
 

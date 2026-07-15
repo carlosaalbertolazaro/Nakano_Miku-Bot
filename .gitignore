@@ -1,6 +1,7 @@
 node_modules/
 sessions/
 tmp/
+temp/
 lib/database/data/
 .env
 *.log

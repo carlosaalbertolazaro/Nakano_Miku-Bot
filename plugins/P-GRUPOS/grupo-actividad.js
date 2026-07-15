@@ -1,45 +1,8 @@
-import fs from 'fs'
-import path from 'path'
 import * as baileysMod from '@whiskeysockets/baileys'
+import { incrementActivity, getActivityMap, resetGroupActivity } from '../../lib/database/UserDb.js'
 
 const pkg = baileysMod.default && Object.keys(baileysMod).length === 1 ? baileysMod.default : baileysMod
 const { jidNormalizedUser } = pkg
-
-const DATA_DIR = path.resolve('./lib/database/data/activity')
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
-
-const writeQueue = new Map()
-
-function getFilePath(groupId) {
-  return path.join(DATA_DIR, `${groupId.replace('@g.us', '')}.json`)
-}
-
-function readActivity(groupId) {
-  const fp = getFilePath(groupId)
-  try {
-    if (fs.existsSync(fp)) return JSON.parse(fs.readFileSync(fp, 'utf-8'))
-  } catch {}
-  return {}
-}
-
-function scheduleWrite(groupId, data) {
-  if (writeQueue.has(groupId)) return
-  writeQueue.set(groupId, setTimeout(() => {
-    writeQueue.delete(groupId)
-    try {
-      fs.writeFileSync(getFilePath(groupId), JSON.stringify(data, null, 2))
-    } catch (e) {
-      console.error(`[ACTIVIDAD] Error escribiendo ${groupId}:`, e.message)
-    }
-  }, 3000))
-}
-
-const memCache = new Map()
-
-function getCache(groupId) {
-  if (!memCache.has(groupId)) memCache.set(groupId, readActivity(groupId))
-  return memCache.get(groupId)
-}
 
 function resolveJid(p) {
   if (p.phoneNumber) {
@@ -59,12 +22,11 @@ const handler = async (m, { conn, participants, isAdmin, isOwner, args, command 
     if (!isAdmin && !isOwner) {
       return m.reply(`*『 👤 』SOLO ADMINS.*\n> Necesitás ser admin para resetear la actividad.`)
     }
-    memCache.set(m.chat, {})
-    try { fs.writeFileSync(getFilePath(m.chat), '{}') } catch {}
+    await resetGroupActivity(m.chat)
     return m.reply(`*『 ✅ 』RESET COMPLETO.*\n> El contador de actividad del grupo fue reiniciado.`)
   }
 
-  const data     = getCache(m.chat)
+  const data     = await getActivityMap(m.chat)
   const mentions = []
   let txt        = ''
 
@@ -134,14 +96,12 @@ handler.all = async function (m) {
   if (!m.isGroup || !m.sender || m.isBaileys) return
   if (!m.message) return
 
-  const data = getCache(m.chat)
-  data[m.sender] = (data[m.sender] || 0) + 1
-  scheduleWrite(m.chat, data)
+  await incrementActivity(m.sender, m.chat)
 }
 
 handler.help      = ['actividad', 'inactivos']
 handler.tags      = ['group']
-handler.command   = ['actividad', 'activos', 'activity', 'rank', 'inactivos', 'inactive', 'nulos']
+handler.command   = ['actividad', 'activos', 'activity', 'inactivos', 'inactive', 'nulos']
 handler.groupOnly = true
 handler.noRegister = true
 
