@@ -52,7 +52,7 @@ pkg install git nodejs ffmpeg -y
 
 termux-setup-storage   # opcional, solo si vas a trabajar archivos en /sdcard
 
-git clone <URL-DE-TU-REPO> ~/miku-bot
+git clone https://github.com/carlosaalbertolazaro/Nakano_Miku-Bot.git ~/miku-bot
 cd ~/miku-bot
 npm install
 npm run doctor          # verifica que todo esté OK antes de arrancar
@@ -70,7 +70,7 @@ proot-distro login ubuntu
 
 # Dentro de la distro:
 apt update && apt install -y git nodejs npm ffmpeg
-git clone <URL-DE-TU-REPO> ~/miku-bot
+git clone https://github.com/carlosaalbertolazaro/Nakano_Miku-Bot.git ~/miku-bot
 cd ~/miku-bot
 npm install
 npm start
