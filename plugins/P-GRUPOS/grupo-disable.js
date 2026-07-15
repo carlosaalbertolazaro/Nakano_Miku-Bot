@@ -1,6 +1,6 @@
 import { groupDbCache } from '../../lib/caches.js'
 
-const ETIQUETAS = ['info', 'group', 'tools', 'descargas', 'convertidores', 'juegos', 'economia', 'anime', 'pokemon', 'cartas', 'fun', 'otros']
+const ETIQUETAS = ['info', 'group', 'tools', 'descargas', 'convertidores', 'juegos', 'economia', 'casino', 'anime', 'pokemon', 'cartas', 'fun', 'otros']
 
 const handler = async (m, { args, usedPrefix, command, groupDb }) => {
   const isEnable = command === 'enable' || command === 'activar'

@@ -20,6 +20,7 @@ const ETIQUETAS = {
   anime:         '🌸 Anime y Gacha',
   pokemon:       '🐾 Pokémon',
   cartas:        '🃏 Cartas (Yu-Gi-Oh)',
+  casino:        '🎰 Casino',
   otros:         '📦 Otros',
 }
 
@@ -49,7 +50,7 @@ function getCategorias(isOwner, groupDb) {
 
 function getOrdenActivo(isOwner, groupDb) {
   const { categorias, total } = getCategorias(isOwner, groupDb)
-  const orden = ['info', 'group', 'descargas', 'convertidores', 'juegos', 'economia', 'anime', 'pokemon', 'cartas', 'tools', 'otros']
+  const orden = ['info', 'group', 'descargas', 'convertidores', 'juegos', 'economia', 'casino', 'anime', 'pokemon', 'cartas', 'tools', 'otros']
   const ordenFinal = orden.filter(k => categorias[k]?.length).concat(
     Object.keys(categorias).filter(k => !orden.includes(k))
   )
