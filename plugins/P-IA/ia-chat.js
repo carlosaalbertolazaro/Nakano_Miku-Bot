@@ -69,23 +69,32 @@ function senderLabel(m) {
   return m.pushName?.trim() || 'esta persona (no tenés su nombre real, no inventes uno)'
 }
 
-async function responder(m, { rawText, apiPrompt, silent = false, model = MODEL_FAST }) {
+async function responder(m, { rawText, apiPrompt, directo = false, model = MODEL_FAST, maxTokens = 300 }) {
   const jid = m.sender
-  if (aiCooldownCache.has(jid)) return
+
+  // El cooldown por remitente (8s) solo aplica a interacción DIRECTA (evita
+  // spamear .ai/mención/reply). Los modos ambientales (normal/constante) ya
+  // tienen su propio cooldown por CHAT (aiSpontaneousCooldownCache) seteado
+  // antes de llegar acá — aplicar ACÁ TAMBIÉN el cooldown por remitente
+  // rompía las menciones directas: si a alguien le tocó una respuesta
+  // espontánea, quedaba bloqueado sin poder mencionar a Miku por 8s más,
+  // en silencio y sin aviso.
+  if (directo) {
+    if (aiCooldownCache.has(jid)) return
+    aiCooldownCache.set(jid, true)
+  }
 
   const trimmed = (rawText || '').trim()
   if (!trimmed) return
 
-  aiCooldownCache.set(jid, true)
-
   try {
-    const respuesta = await askAI(apiPrompt || trimmed, getHistory(jid), model)
-    if (silent && /^NOPE\b/i.test(respuesta.trim())) return // decidió no sumarse, no se manda nada
+    const respuesta = await askAI(apiPrompt || trimmed, getHistory(jid), model, maxTokens)
+    if (/^NOPE\b/i.test(respuesta.trim())) return // decidió no sumarse (solo puede pasar en modo ambiental)
 
     pushHistory(jid, trimmed, respuesta)
     await m.reply(respuesta)
   } catch (e) {
-    if (silent) return // en modo espontáneo no se ensucia el grupo con errores técnicos
+    if (!directo) return // en modos ambientales no se ensucia el grupo con errores técnicos
     await m.reply(`*『 ❌ 』ERROR DE IA*\n> ${e.message}`)
   }
 }
@@ -99,7 +108,7 @@ const handler = async (m, { text }) => {
   // es donde realmente hace falta.
   const nombre = senderLabel(m)
   const apiPrompt = `${nombre} te escribe${m.isGroup ? '' : ' por privado'}: ${text}`
-  await responder(m, { rawText: text, apiPrompt, model: MODEL_SMART })
+  await responder(m, { rawText: text, apiPrompt, model: MODEL_SMART, directo: true })
 }
 
 handler.all = async function (m, { conn, groupDb }) {
@@ -128,7 +137,7 @@ handler.all = async function (m, { conn, groupDb }) {
     const apiPrompt = m.isGroup
       ? `${nombre} te habla directamente (te mencionó o te respondió): ${body}`
       : `${nombre} te escribe por privado: ${body}`
-    return responder(m, { rawText: body, apiPrompt, model: MODEL_SMART })
+    return responder(m, { rawText: body, apiPrompt, model: MODEL_SMART, directo: true })
   }
 
   // A partir de acá: mensaje de grupo normal, nadie le habló a Miku directamente.
@@ -153,7 +162,7 @@ handler.all = async function (m, { conn, groupDb }) {
       `nadie te habló a vos directamente, pero estás en "modo charla" y siempre sumás algo (una gracia, ` +
       `una opinión corta, una reacción) a lo que se viene hablando. Respondé siempre, breve y natural.`
 
-    return responder(m, { rawText: body, apiPrompt, silent: false, model: MODEL_FAST })
+    return responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 120 })
   }
 
   // Modo normal: participación ocasional, puede "elegir" no decir nada.
@@ -168,7 +177,7 @@ handler.all = async function (m, { conn, groupDb }) {
     `Si te parece natural sumar un comentario breve (una gracia, una opinión corta, algo que aporte a lo que se viene hablando), respondé eso. ` +
     `Si no tenés nada que aportar o no pega meterte ahora, respondé EXACTAMENTE la palabra NOPE y nada más.`
 
-  await responder(m, { rawText: body, apiPrompt, silent: true, model: MODEL_FAST })
+  await responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 120 })
 }
 
 handler.help = ['ai <prompt>']
