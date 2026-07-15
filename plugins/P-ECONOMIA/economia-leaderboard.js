@@ -30,6 +30,7 @@ const handler = async (m, { participants, command }) => {
 }
 
 handler.help = ['topxp', 'topcoins']
+handler.desc = 'Top 10 del grupo por experiencia o por monedas.'
 handler.tags = ['economia']
 handler.command = ['topxp', 'topcoins', 'topmonedas', 'ricos', 'leaderboard']
 handler.groupOnly = true

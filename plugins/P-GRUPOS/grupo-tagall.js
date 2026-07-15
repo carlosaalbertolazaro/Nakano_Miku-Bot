@@ -9,6 +9,7 @@ const handler = async (m, { conn, text, participants }) => {
 }
 
 handler.help = ['tagall']
+handler.desc = 'Mencionar a todos los miembros del grupo, listando sus nombres.'
 handler.tags = ['group']
 handler.command = ['tagall', 'mencionartodos', 'invocar', 'todos']
 handler.groupOnly = true

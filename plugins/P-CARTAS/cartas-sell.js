@@ -24,6 +24,7 @@ const handler = async (m, { args, usedPrefix, command }) => {
 }
 
 handler.help = ['vendercarta <numero>']
+handler.desc = 'Vender una carta por monedas, según su rareza.'
 handler.tags = ['cartas']
 handler.command = ['vendercarta']
 

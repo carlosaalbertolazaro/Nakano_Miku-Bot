@@ -35,6 +35,7 @@ const handler = async (m, { text }) => {
 }
 
 handler.help = ['bal [@user]']
+handler.desc = 'Ver tu perfil: monedas, nivel, XP y progreso hacia el siguiente nivel.'
 handler.tags = ['economia']
 handler.command = ['bal', 'balance', 'economia', 'perfil', 'profile']
 

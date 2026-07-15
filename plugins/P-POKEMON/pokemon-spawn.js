@@ -144,6 +144,7 @@ handler.all = async function (m, { conn, groupDb }) {
 }
 
 handler.help = ['catch <nombre>']
+handler.desc = 'Atrapá al Pokémon salvaje que aparece automáticamente en el grupo adivinando su nombre (inglés o español).'
 handler.tags = ['pokemon']
 handler.command = ['catch', 'atrapar']
 handler.groupOnly = true

@@ -35,7 +35,8 @@ const handler = async (m, { conn, text, participants }) => {
   }
 }
 
-handler.help = ['tag']
+handler.help = ['tag <texto>']
+handler.desc = 'Mandar un mensaje mencionando a todos en silencio (sin listar sus nombres).'
 handler.tags = ['group']
 handler.command = ['tag', 'n', 'mensaje', 'notify', 'notificar', 'mencionar']
 handler.groupOnly = true

@@ -28,6 +28,7 @@ const handler = async (m) => {
 }
 
 handler.help = ['daily']
+handler.desc = 'Reclamá tu recompensa diaria de monedas (100-300, una vez cada 24h).'
 handler.tags = ['economia']
 handler.command = ['daily', 'diario', 'recompensa']
 

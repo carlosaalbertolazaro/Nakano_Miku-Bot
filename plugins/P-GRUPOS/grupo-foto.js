@@ -51,6 +51,7 @@ const handler = async (m, { conn }) => {
 }
 
 handler.help = ['fotog']
+handler.desc = 'Cambiar la foto del grupo (respondé a una imagen).'
 handler.tags = ['group']
 handler.command = ['fotog', 'setfoto', 'groupfoto']
 handler.groupOnly = true

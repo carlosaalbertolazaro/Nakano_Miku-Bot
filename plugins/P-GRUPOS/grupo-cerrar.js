@@ -4,6 +4,7 @@ const handler = async (m, { conn }) => {
 }
 
 handler.help = ['cerrar']
+handler.desc = 'Cerrar el grupo para que solo los admins puedan escribir.'
 handler.tags = ['group']
 handler.command = ['cerrar', 'closegroup', 'close']
 handler.groupOnly = true

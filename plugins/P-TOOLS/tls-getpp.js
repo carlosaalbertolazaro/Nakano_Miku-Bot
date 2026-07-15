@@ -35,7 +35,8 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     }
 }
 
-handler.help = ['getpp']
+handler.help = ['getpp [@user]']
+handler.desc = 'Ver la foto de perfil de alguien en alta resolución.'
 handler.tags = ['tools']
 handler.command = ['getpp', 'pfp', 'pp', 'foto']
 handler.groupOnly = false

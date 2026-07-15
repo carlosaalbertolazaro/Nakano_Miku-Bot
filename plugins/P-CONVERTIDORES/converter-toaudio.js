@@ -46,6 +46,7 @@ const handler = async (m, { conn, command }) => {
 }
 
 handler.help = ['toaudio', 'todoc']
+handler.desc = 'Convertir un video a audio, o cualquier media a documento.'
 handler.command = ['toaudio', 'tomp3', 'todoc', 'todocumento']
 handler.tags = ['convertidores']
 

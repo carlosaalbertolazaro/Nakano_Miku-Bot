@@ -33,6 +33,7 @@ const handler = async (m, { args, usedPrefix, command }) => {
 }
 
 handler.help = ['pay @user <cantidad>']
+handler.desc = 'Transferí monedas de tu balance a otro usuario.'
 handler.tags = ['economia']
 handler.command = ['pay', 'dar', 'transferir']
 handler.groupOnly = false

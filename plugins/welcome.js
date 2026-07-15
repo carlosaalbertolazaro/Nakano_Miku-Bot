@@ -122,6 +122,7 @@ export async function manejarParticipantes(conn, update) {
 }
 
 handler.help = ['welcome <on/off>', 'bye <on/off>', 'setwelcome <texto>', 'setbye <texto>']
+handler.desc = 'Mensaje de bienvenida/despedida automático cuando alguien entra o sale del grupo.'
 handler.tags = ['group']
 handler.command = ['welcome', 'bienvenida', 'bye', 'despedida', 'setwelcome', 'setbye']
 handler.groupOnly = true

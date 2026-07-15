@@ -26,6 +26,7 @@ const handler = async (m, { conn, text }) => {
 }
 
 handler.help = ['fb <link>']
+handler.desc = 'Descargar un video de Facebook (HD o SD).'
 handler.command = ['fbdl', 'fb', 'facebook', 'facebookdl']
 handler.tags = ['descargas']
 

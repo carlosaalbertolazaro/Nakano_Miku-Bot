@@ -53,6 +53,7 @@ const handler = async (m, { conn, participants, config }) => {
 }
 
 handler.help = ['ban @tag']
+handler.desc = 'Expulsar a un miembro del grupo.'
 handler.tags = ['group']
 handler.command = ['ban', 'kick', 'echar', 'expulsar']
 handler.groupOnly = true

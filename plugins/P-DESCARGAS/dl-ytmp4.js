@@ -123,6 +123,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 }
 
 handler.help = ['ytmp4 <link>']
+handler.desc = 'Descargar un video de YouTube en MP4.'
 handler.command = ['ytmp4', 'ytv', 'ytvideo', 'ytmp4dl']
 handler.tags = ['descargas']
 

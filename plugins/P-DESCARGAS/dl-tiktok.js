@@ -68,6 +68,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 }
 
 handler.help = ['tt <link>']
+handler.desc = 'Descargar un video de TikTok sin marca de agua.'
 handler.command = ['ttkdl', 'tt', 'tiktok', 'tiktokdl', 'ttk']
 handler.tags = ['descargas']
 

@@ -4,6 +4,7 @@ const handler = async (m, { conn }) => {
 }
 
 handler.help = ['abrir']
+handler.desc = 'Abrir el grupo para que todos puedan escribir.'
 handler.tags = ['group']
 handler.command = ['abrir', 'open', 'opengroup']
 handler.groupOnly = true

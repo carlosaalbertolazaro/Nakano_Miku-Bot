@@ -38,4 +38,5 @@ const handler = async (m, { conn, text, usedPrefix }) => {
 handler.command = ['get']
 handler.tags = ['tools']
 handler.help = ['get <url>']
+handler.desc = 'Descargar y mandar cualquier imagen/video/audio/JSON desde un link directo.'
 export default handler

@@ -30,6 +30,7 @@ const handler = async (m, { args, usedPrefix, command }) => {
 }
 
 handler.help = ['coinflip <apuesta> <cara|cruz>']
+handler.desc = 'Cara o cruz — acertá y duplicás tu apuesta.'
 handler.tags = ['casino']
 handler.command = ['coinflip', 'caraocruz']
 

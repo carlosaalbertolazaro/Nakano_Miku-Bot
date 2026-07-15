@@ -36,6 +36,7 @@ const handler = async (m, { conn }) => {
 }
 
 handler.help = ['sticker <img/vid>']
+handler.desc = 'Convertir una imagen o video (hasta 11s) en sticker.'
 handler.command = ['sticker', 's', 'stiker', 'stic', 'figurinha']
 handler.tags = ['convertidores']
 

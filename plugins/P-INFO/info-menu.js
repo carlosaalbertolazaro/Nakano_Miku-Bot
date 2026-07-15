@@ -26,6 +26,7 @@ const ETIQUETAS = {
   pokemon:       '🐾 Pokémon',
   cartas:        '🃏 Cartas (Yu-Gi-Oh)',
   casino:        '🎰 Casino',
+  roleplay:      '💞 Rol / Interacción',
   otros:         '📦 Otros',
 }
 
@@ -48,14 +49,14 @@ function getCategorias(isOwner, groupDb) {
     if (groupDb && cmdsReales.every(c => groupDb.disabledCmds?.includes(c))) continue
     if (!categorias[tag]) categorias[tag] = []
     const cmds = Array.isArray(p.help) ? p.help : [p.help]
-    for (const cmd of cmds) { categorias[tag].push(cmd); total++ }
+    for (const cmd of cmds) { categorias[tag].push({ cmd, desc: p.desc || '' }); total++ }
   }
   return { categorias, total }
 }
 
 function getOrdenActivo(isOwner, groupDb) {
   const { categorias, total } = getCategorias(isOwner, groupDb)
-  const orden = ['info', 'group', 'descargas', 'convertidores', 'juegos', 'economia', 'casino', 'anime', 'pokemon', 'cartas', 'tools', 'otros']
+  const orden = ['info', 'group', 'descargas', 'convertidores', 'juegos', 'economia', 'casino', 'anime', 'pokemon', 'cartas', 'roleplay', 'tools', 'otros']
   const ordenFinal = orden.filter(k => categorias[k]?.length).concat(
     Object.keys(categorias).filter(k => !orden.includes(k))
   )
@@ -76,12 +77,13 @@ async function enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb) {
   const nombreCat = ETIQUETAS[tag] || ETIQUETAS.otros
   const prefix = usedPrefix || '.'
 
-  let caption = `┌─────────────────\n`
-  caption += `└┐  *${nombreCat.toUpperCase()}*\n`
-  caption += `┌┤\n`
-  for (const cmd of comandos) caption += `││  ${prefix}${cmd}\n`
-  caption += `│└──⊷\n`
-  caption += `└─────────────────\n\n`
+  let caption = `*┏━━•❈ ${nombreCat.toUpperCase()} ❈•━━┓*\n\n`
+  for (const { cmd, desc } of comandos) {
+    caption += `✧ *${prefix}${cmd}*\n`
+    if (desc) caption += `   ${desc}\n`
+    caption += `\n`
+  }
+  caption += `*┗━━━━•❅•°•❈•°•❅•━━━━┛*\n\n`
   caption += `> 🔙 Escribí *${prefix}menu* para volver al menú principal.`
 
   const imageUrl = IMAGENES.length ? IMAGENES[Math.floor(Math.random() * IMAGENES.length)] : null

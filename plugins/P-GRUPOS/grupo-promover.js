@@ -14,7 +14,8 @@ const handler = async (m, { conn }) => {
   m.reply(`*『 ⬆️ 』PROMOVIDO.*\n▢ *Admin:* @${targetNum}`, [targetJid])
 }
 
-handler.help = ['promover']
+handler.help = ['promover @tag']
+handler.desc = 'Darle el rol de admin a un miembro del grupo.'
 handler.tags = ['group']
 handler.command = ['promover', 'promote', 'admin']
 handler.groupOnly = true

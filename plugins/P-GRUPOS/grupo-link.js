@@ -4,6 +4,7 @@ const handler = async (m, { conn, usedPrefix, command }) => {
 }
 
 handler.help = ['link']
+handler.desc = 'Obtener el link de invitación del grupo.'
 handler.tags = ['group']
 handler.command = ['link', 'invitar', 'invite']
 handler.groupOnly = true

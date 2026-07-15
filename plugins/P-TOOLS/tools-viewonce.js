@@ -32,4 +32,5 @@ const handler = async (m, { conn }) => {
 handler.command = ['verfoto', 'verview', 'verft', 'vervideo', 'ver', 'vervid', 'veraudio', 'voaudio']
 handler.tags = ['tools']
 handler.help = ['ver <responder a un vid/aud/img viewonce>']
+handler.desc = 'Desbloquear una foto/video/audio de "ver una vez" que te respondan citando.'
 export default handler

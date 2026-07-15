@@ -57,6 +57,7 @@ const handler = async (m, { conn, command, text }) => {
 }
 
 handler.help = ['tovideo', 'reversevid', 'speedvid <vel>']
+handler.desc = 'Convertir audio a video, invertir un video, o cambiarle la velocidad.'
 handler.command = ['tovideo', 'tomp4', 'reversevid', 'speedvid']
 handler.tags = ['convertidores']
 

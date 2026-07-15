@@ -296,6 +296,7 @@ const handler = async (m, ctx) => {
 }
 
 handler.help = ['torneo', 'torneo unirse', 'torneo iniciar', 'torneo ganador a|b', 'torneo cancelar', 'torneo estado']
+handler.desc = 'Torneo relámpago de eliminación simple con inscripción abierta y bracket automático.'
 handler.tags = ['juegos']
 handler.command = ['torneo', 'tourney']
 handler.groupOnly = true

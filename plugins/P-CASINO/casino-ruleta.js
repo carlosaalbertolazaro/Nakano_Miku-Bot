@@ -52,6 +52,7 @@ const handler = async (m, { args, usedPrefix, command }) => {
 }
 
 handler.help = ['ruleta <apuesta> <rojo|negro|verde|numero>']
+handler.desc = 'Ruleta europea. Color paga 2x, verde 14x, número exacto 36x.'
 handler.tags = ['casino']
 handler.command = ['ruleta', 'roulette']
 

@@ -9,6 +9,7 @@ const handler = async (m) => {
 }
 
 handler.help = ['uptime']
+handler.desc = 'Ver hace cuánto está prendido el bot.'
 handler.command = ['uptime', 'runtime']
 handler.tags    = ['info']
 

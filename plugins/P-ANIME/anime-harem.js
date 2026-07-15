@@ -35,6 +35,7 @@ const handler = async (m, { args }) => {
 }
 
 handler.help = ['harem [pagina]']
+handler.desc = 'Ver tu colección de personajes de anime reclamados.'
 handler.tags = ['anime']
 handler.command = ['harem', 'miharem', 'coleccion']
 

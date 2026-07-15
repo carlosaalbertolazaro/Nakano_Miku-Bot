@@ -99,6 +99,7 @@ handler.all = async function (m, { conn }) {
 }
 
 handler.help = ['trivia [categoria]']
+handler.desc = 'Pregunta de trivia en español (traducida) con 4 opciones — respondé con el número. Categorías: general, anime, gaming, peliculas, musica, ciencia, historia, geografia, mitologia, deportes, animales.'
 handler.tags = ['juegos']
 handler.command = ['trivia']
 handler.groupOnly = true

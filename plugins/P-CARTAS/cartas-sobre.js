@@ -61,6 +61,7 @@ const handler = async (m, { conn, groupDb }) => {
 }
 
 handler.help = ['sobre']
+handler.desc = 'Abrir un sobre de Yu-Gi-Oh (50 monedas) con 1 carta al azar.'
 handler.tags = ['cartas']
 handler.command = ['sobre', 'pack', 'abrirsobre']
 

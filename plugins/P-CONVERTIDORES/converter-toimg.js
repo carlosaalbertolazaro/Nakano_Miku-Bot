@@ -57,6 +57,7 @@ const handler = async (m, { conn, command }) => {
 }
 
 handler.help = ['toimg', 'togif']
+handler.desc = 'Convertir un sticker en imagen o GIF.'
 handler.command = ['toimg', 'togif']
 handler.tags = ['convertidores']
 

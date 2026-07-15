@@ -44,6 +44,7 @@ const handler = async (m) => {
 }
 
 handler.help = ['update']
+handler.desc = '(Owner) Actualizar el bot con git pull, sin borrar ni re-clonar nada.'
 handler.tags = ['info']
 handler.command = ['update', 'actualizar', 'pull']
 handler.ownerOnly = true

@@ -123,6 +123,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 }
 
 handler.help = ['ytmp3 <link>']
+handler.desc = 'Descargar el audio de un video de YouTube en MP3.'
 handler.command = ['ytmp3', 'yta', 'ytaudio', 'ytmp3dl']
 handler.tags = ['descargas']
 

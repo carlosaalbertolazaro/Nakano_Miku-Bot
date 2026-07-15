@@ -64,6 +64,7 @@ handler.before = async (m, { conn, isAdmin, isOwner, isBotAdmin, groupDb }) => {
 }
 
 handler.help = ['antilink <on/off>']
+handler.desc = 'Borra automáticamente links de invitación a otros grupos de WhatsApp y expulsa a quien los mande.'
 handler.tags = ['group']
 handler.command = ['antilink', 'antienlace']
 handler.groupOnly = true

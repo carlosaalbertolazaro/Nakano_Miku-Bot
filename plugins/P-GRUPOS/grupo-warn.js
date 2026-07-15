@@ -68,6 +68,7 @@ const handler = async (m, { conn, args, command, groupDb, participants, usedPref
 }
 
 handler.help = ['warn @tag', 'warns @tag', 'delwarn @tag', 'resetwarn @tag', 'setwarnlimit N']
+handler.desc = 'Sistema de advertencias: dar/ver/quitar warns, y expulsión automática al llegar al límite.'
 handler.tags = ['group']
 handler.command = ['warn', 'warns', 'delwarn', 'resetwarn', 'setwarnlimit']
 handler.groupOnly = true

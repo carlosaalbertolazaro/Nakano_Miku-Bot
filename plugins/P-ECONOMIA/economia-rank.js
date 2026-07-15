@@ -43,6 +43,7 @@ const handler = async (m, { conn, text, participants }) => {
 }
 
 handler.help = ['rank [@user]']
+handler.desc = 'Tarjeta visual con tu nivel, XP, monedas y posición en el ranking del grupo.'
 handler.tags = ['economia']
 handler.command = ['rank', 'level', 'nivel']
 

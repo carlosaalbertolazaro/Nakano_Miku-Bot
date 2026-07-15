@@ -12,6 +12,7 @@ const handler = async (m, { args, usedPrefix, command, groupDb }) => {
 }
 
 handler.help = ['nsfw <on/off>']
+handler.desc = 'Permitir o bloquear contenido +18 en este grupo.'
 handler.tags = ['group']
 handler.command = ['nsfw']
 handler.groupOnly = true

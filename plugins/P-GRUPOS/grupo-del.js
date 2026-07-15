@@ -16,6 +16,7 @@ const handler = async (m, { conn }) => {
 }
 
 handler.help = ['del']
+handler.desc = 'Borrar un mensaje (respondé al mensaje que querés borrar).'
 handler.tags = ['group']
 handler.command = ['del', 'delete', 'borrar']
 handler.groupOnly = true

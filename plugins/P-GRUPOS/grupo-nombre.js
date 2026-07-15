@@ -5,7 +5,8 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
   m.reply(`*『 ✅ 』NOMBRE ACTUALIZADO.*\n▢ *Nuevo nombre:* ${text}`)
 }
 
-handler.help = ['nombre']
+handler.help = ['nombre <texto>']
+handler.desc = 'Cambiar el nombre del grupo.'
 handler.tags = ['group']
 handler.command = ['nombre', 'groupname', 'setnombre']
 handler.groupOnly = true

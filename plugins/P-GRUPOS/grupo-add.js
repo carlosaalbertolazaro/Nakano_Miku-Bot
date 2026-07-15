@@ -61,7 +61,8 @@ const handler = async (m, { conn, text, usedPrefix, participants }) => {
   }
 }
 
-handler.help = ['agregar @tag']
+handler.help = ['agregar <numero>']
+handler.desc = 'Agregar a alguien al grupo por su número.'
 handler.tags = ['group']
 handler.command = ['add', 'agregar', 'añadir', 'invitar']
 handler.groupOnly = true

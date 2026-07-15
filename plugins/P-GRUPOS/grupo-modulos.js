@@ -41,6 +41,7 @@ const handler = async (m, { args, groupDb, usedPrefix, command }) => {
 }
 
 handler.help = ['modulos', 'modulos <pokemon|waifu|cards> <on/off>']
+handler.desc = 'Activar/desactivar por separado el gacha de waifus, los Pokémon salvajes o las cartas en este grupo.'
 handler.tags = ['group']
 handler.command = ['modulos', 'modules', 'toggle']
 handler.groupOnly = true

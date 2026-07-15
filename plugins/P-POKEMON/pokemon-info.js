@@ -37,6 +37,7 @@ const handler = async (m, { conn, args, usedPrefix, command }) => {
 }
 
 handler.help = ['pokeinfo <numero>']
+handler.desc = 'Ver la ficha de un Pokémon atrapado (tipo, rareza, imagen).'
 handler.tags = ['pokemon']
 handler.command = ['pokeinfo', 'infopokemon']
 

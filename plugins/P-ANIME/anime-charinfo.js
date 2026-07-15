@@ -37,6 +37,7 @@ const handler = async (m, { conn, args, usedPrefix, command }) => {
 }
 
 handler.help = ['charinfo <numero>']
+handler.desc = 'Ver la ficha de un personaje reclamado (serie, rareza, imagen).'
 handler.tags = ['anime']
 handler.command = ['charinfo', 'infowaifu', 'verpersonaje']
 

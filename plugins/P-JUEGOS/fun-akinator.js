@@ -271,6 +271,7 @@ const handler = async (m, { conn, command, usedPrefix }) => {
 }
 
 handler.help       = ['akinator']
+handler.desc       = 'El genio adivina en qué personaje, animal u objeto estás pensando.'
 handler.tags       = ['juegos']
 handler.command    = [
   'akinator', 'aki', 'akistop',

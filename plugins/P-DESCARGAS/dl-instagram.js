@@ -61,6 +61,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 }
 
 handler.help = ['ig <link>']
+handler.desc = 'Descargar posts, reels o carruseles de Instagram.'
 handler.command = ['ig', 'instagram', 'igdl', 'instagramdl', 'reel', 'reeldl']
 handler.tags = ['descargas']
 

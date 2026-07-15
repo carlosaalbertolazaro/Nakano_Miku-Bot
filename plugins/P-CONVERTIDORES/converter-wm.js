@@ -34,6 +34,7 @@ const handler = async (m, { conn, text }) => {
 }
 
 handler.help = ['wm <pack | author>']
+handler.desc = 'Cambiarle el nombre de pack/autor a un sticker (respondiéndolo).'
 handler.command = ['wm', 'take', 'watermark', 'stickerinfo', 'setwm']
 handler.tags = ['convertidores']
 

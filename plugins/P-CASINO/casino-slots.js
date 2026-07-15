@@ -58,6 +58,7 @@ const handler = async (m, { args }) => {
 }
 
 handler.help = ['slots <apuesta>']
+handler.desc = 'Tragamonedas de 3 rodillos. Triple símbolo paga en grande (hasta 50x).'
 handler.tags = ['casino']
 handler.command = ['slots', 'tragamonedas']
 

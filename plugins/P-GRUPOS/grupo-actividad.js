@@ -100,6 +100,7 @@ handler.all = async function (m) {
 }
 
 handler.help      = ['actividad', 'inactivos']
+handler.desc      = 'Ranking de mensajes del grupo: más activos o más inactivos.'
 handler.tags      = ['group']
 handler.command   = ['actividad', 'activos', 'activity', 'inactivos', 'inactive', 'nulos']
 handler.groupOnly = true

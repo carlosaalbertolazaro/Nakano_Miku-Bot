@@ -112,6 +112,7 @@ const handler = async (m, ctx) => {
 }
 
 handler.help = ['gacha', 'claim']
+handler.desc = 'Invoca un personaje de anime al azar (Jikan/MyAnimeList). El primero en escribir *.claim* se lo queda.'
 handler.tags = ['anime']
 handler.command = ['gacha', 'roll', 'waifu', 'claim', 'reclamar']
 handler.groupOnly = true

@@ -24,6 +24,7 @@ const handler = async (m, { args, usedPrefix, command }) => {
 }
 
 handler.help = ['sellwaifu <numero>']
+handler.desc = 'Vender un personaje reclamado por monedas, según su rareza.'
 handler.tags = ['anime']
 handler.command = ['sellwaifu', 'vender']
 

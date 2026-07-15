@@ -126,6 +126,7 @@ const handler = async (m, { conn, args, command }) => {
 }
 
 handler.help = ['ttt [facil|medio|dificil|imposible]']
+handler.desc = 'Tres en raya contra la IA del bot, con 4 niveles de dificultad.'
 handler.tags = ['juegos']
 handler.command = ['ttt', 'tttcancel', 'cancelarttt', '1','2','3','4','5','6','7','8','9']
 

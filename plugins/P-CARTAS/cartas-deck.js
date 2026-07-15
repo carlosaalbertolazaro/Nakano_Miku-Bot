@@ -35,6 +35,7 @@ const handler = async (m, { args }) => {
 }
 
 handler.help = ['deck [pagina]']
+handler.desc = 'Ver tu colección de cartas de Yu-Gi-Oh.'
 handler.tags = ['cartas']
 handler.command = ['deck', 'miscartas']
 

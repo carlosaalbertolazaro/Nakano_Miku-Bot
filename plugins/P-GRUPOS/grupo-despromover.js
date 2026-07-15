@@ -23,6 +23,8 @@ const handler = async (m, { conn }) => {
   m.reply(`*『 ⬇️ 』DESPROMOVIDO.*\n▢ *Quitado de admin:* @${targetNum}`, [targetJid])
 }
 
+handler.help = ['despromover @tag']
+handler.desc = 'Quitarle el rol de admin a un miembro del grupo.'
 handler.tags = ['group']
 handler.command = ['despromover', 'demote', 'deadmin']
 handler.groupOnly = true

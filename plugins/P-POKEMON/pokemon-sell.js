@@ -26,6 +26,7 @@ const handler = async (m, { args, usedPrefix, command }) => {
 }
 
 handler.help = ['sellpokemon <numero>']
+handler.desc = 'Liberar un Pokémon atrapado a cambio de monedas (más si es shiny).'
 handler.tags = ['pokemon']
 handler.command = ['sellpokemon', 'liberarpokemon']
 

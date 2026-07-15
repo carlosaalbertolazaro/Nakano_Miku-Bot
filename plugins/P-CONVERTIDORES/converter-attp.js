@@ -47,6 +47,7 @@ const handler = async (m, { conn, text, command }) => {
 }
 
 handler.help    = ['attp <texto>']
+handler.desc    = 'Crear un sticker animado con tu texto (GIF de texto).'
 handler.command = ['attp', 'atextpng', 'textgif']
 handler.tags    = ['convertidores']
 export default handler

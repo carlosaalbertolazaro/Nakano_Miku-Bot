@@ -5,7 +5,8 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
   m.reply(`*『 ✅ 』DESCRIPCIÓN ACTUALIZADA.*\n▢ *Nueva descripción:* ${text}`)
 }
 
-handler.help = ['desc']
+handler.help = ['desc <texto>']
+handler.desc = 'Cambiar la descripción del grupo.'
 handler.tags = ['group']
 handler.command = ['desc', 'descripcion', 'setdesc']
 handler.groupOnly = true

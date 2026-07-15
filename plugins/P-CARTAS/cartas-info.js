@@ -36,6 +36,7 @@ const handler = async (m, { conn, args, usedPrefix, command }) => {
 }
 
 handler.help = ['cartainfo <numero>']
+handler.desc = 'Ver la ficha de una carta (ATK/DEF, tipo, rareza, imagen).'
 handler.tags = ['cartas']
 handler.command = ['cartainfo', 'infocarta']
 

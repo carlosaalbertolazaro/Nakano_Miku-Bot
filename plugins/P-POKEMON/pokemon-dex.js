@@ -36,6 +36,7 @@ const handler = async (m, { args }) => {
 }
 
 handler.help = ['pokedex [pagina]']
+handler.desc = 'Ver todos los Pokémon que atrapaste.'
 handler.tags = ['pokemon']
 handler.command = ['pokedex', 'mipokedex']
 

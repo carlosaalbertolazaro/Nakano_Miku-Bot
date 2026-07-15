@@ -156,6 +156,7 @@ const handler = async (m, ctx) => {
 }
 
 handler.help = ['blackjack <apuesta>', 'blackjack hit', 'blackjack stand']
+handler.desc = 'Blackjack real contra el dealer: pedí carta o plantate. Blackjack natural paga 3:2.'
 handler.tags = ['casino']
 handler.command = ['blackjack', 'bj']
 
