@@ -3,11 +3,16 @@ import { plugins } from '../../handler.js'
 
 const START_TIME = Date.now()
 
-// TODO: reemplazar por imágenes propias de Nakano Miku (subilas a un host de
-// imágenes tipo ibb.co/imgur y pegá los links acá). Se deja vacío a
-// propósito: no queremos hotlinkear imágenes de otros personajes/servicios
-// sin verificar que el link sea estable y correcto.
-const IMAGENES = []
+// Imágenes de Nakano Miku provistas por Carlos (ibb.co), verificadas (200 OK,
+// image/jpeg) antes de agregarlas.
+const IMAGENES = [
+  'https://i.ibb.co/ZQRx7YG/09ed7487d4247be8c312d028b745bc6e.jpg',
+  'https://i.ibb.co/G3byH4TP/37f2fc6336a20e75bd75d43656e6e2b0.jpg',
+  'https://i.ibb.co/Pv7yCCgj/77739e7093a20cf6acdbb55ed94431b3.jpg',
+  'https://i.ibb.co/RTJx2GQb/66639a2c62e24b6433dab377a5661e84.jpg',
+  'https://i.ibb.co/5WqBpQ1f/4c5d5a900adcb5a7ff64dd3ff8d7d35c.jpg',
+  'https://i.ibb.co/9kjZrTHQ/abf465e6523544acbccb7bfad878be56-1.jpg',
+]
 
 const ETIQUETAS = {
   info:          'ℹ️  Información',

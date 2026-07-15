@@ -159,6 +159,20 @@ npm run doctor
 
 ---
 
+## 🔄 Actualizar Miku
+
+**No hace falta borrar la carpeta ni volver a clonar todo de nuevo.** `git pull` solo baja lo que cambió:
+
+```bash
+cd ~/miku-bot
+git pull
+npm install       # solo hace falta si package.json cambió
+```
+
+Reiniciá el bot después (`pm2 restart miku` si usás pm2, o Ctrl+C y `npm start` si no). También podés actualizar sin salir de WhatsApp con **`.update`** (solo el owner del bot) — hace el `git pull` (y el `npm install` si hace falta) por vos; después igual hay que reiniciar el proceso a mano.
+
+---
+
 ## 🧩 Agregar un plugin nuevo
 
 Los comandos de Miku son "plugins" — cualquier archivo `.js` dentro de `plugins/<CATEGORIA>/` se carga automáticamente (con hot-reload, no hace falta reiniciar el bot). Usá `templates/plugin-template.js` como punto de partida — tiene documentado el contrato completo (qué exportar, qué propiedades usar, hooks disponibles).
