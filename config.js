@@ -17,7 +17,7 @@ const config = {
   packname: 'Miku',
   author: 'Carlos',
   ai: {
-    geminiApiKey: process.env.GEMINI_API_KEY || null,
+    groqApiKey: process.env.GROQ_API_KEY || null,
   },
   aternos: {
     host: process.env.ATERNOS_SERVER_HOST || null,

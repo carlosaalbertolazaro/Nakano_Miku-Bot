@@ -77,7 +77,7 @@ cp .env.example .env
 nano .env
 ```
 
-Agregá tu `GEMINI_API_KEY` (y cualquier otra variable que ya tengas
+Agregá tu `GROQ_API_KEY` (y cualquier otra variable que ya tengas
 configurada en el `.env` de tu teléfono). Guardá con `Ctrl+O` → `Enter`,
 salí con `Ctrl+X`.
 

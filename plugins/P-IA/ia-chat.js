@@ -1,10 +1,10 @@
 import { jidNormalizedUser } from '@whiskeysockets/baileys'
 import config from '../../config.js'
-import { askGemini } from '../../lib/gemini.js'
+import { askAI } from '../../lib/ai.js'
 import { aiCooldownCache, aiSpontaneousCooldownCache } from '../../lib/caches.js'
 
-// Charla conversacional con Gemini. Tres formas de activarla:
-// 1. Comando explícito .ai/.miku/.gemini.
+// Charla conversacional con IA (Groq). Tres formas de activarla:
+// 1. Comando explícito .ai/.miku.
 // 2. Pasiva sin prefijo: por privado siempre, si te responden citando un
 //    mensaje de la propia Miku, o si la mencionan con @ en un grupo.
 // 3. Participación ESPONTÁNEA en grupos: de vez en cuando, sin que nadie le
@@ -26,7 +26,7 @@ const SPONTANEOUS_CHANCE = 0.15 // 15% de probabilidad por mensaje "elegible" en
 const SPONTANEOUS_MIN_LENGTH = 8 // ignora mensajes muy cortos (evita ruido tipo "jaja", "ok")
 const CONSTANT_MODE_COOLDOWN_SEC = 4 // solo para no disparar 2 respuestas por mensajes casi simultáneos
 
-const conversations = new Map() // jid -> [{role, parts}] — historial 1:1 de cada persona con Miku
+const conversations = new Map() // jid -> [{role:'user'|'assistant', content}] — historial 1:1 de cada persona con Miku
 const groupHistory = new Map()  // chat -> [{name, text}] — últimos mensajes del grupo, solo contexto
 
 function getHistory(jid) {
@@ -35,8 +35,8 @@ function getHistory(jid) {
 
 function pushHistory(jid, userText, modelText) {
   const history = getHistory(jid)
-  history.push({ role: 'user', parts: [{ text: userText }] })
-  history.push({ role: 'model', parts: [{ text: modelText }] })
+  history.push({ role: 'user', content: userText })
+  history.push({ role: 'assistant', content: modelText })
   while (history.length > MAX_HISTORY_TURNS * 2) history.shift()
   conversations.set(jid, history)
 }
@@ -65,7 +65,7 @@ async function responder(m, { rawText, apiPrompt, silent = false }) {
   aiCooldownCache.set(jid, true)
 
   try {
-    const respuesta = await askGemini(apiPrompt || trimmed, getHistory(jid))
+    const respuesta = await askAI(apiPrompt || trimmed, getHistory(jid))
     if (silent && /^NOPE\b/i.test(respuesta.trim())) return // decidió no sumarse, no se manda nada
 
     pushHistory(jid, trimmed, respuesta)
@@ -144,8 +144,8 @@ handler.all = async function (m, { conn, groupDb }) {
 }
 
 handler.help = ['ai <prompt>']
-handler.desc = 'Hablá con Miku (Gemini AI) — responde si le contestás un mensaje suyo, la mencionás, o le escribís por privado. En grupos también se suma sola a la charla de vez en cuando (ver .iamodo para que participe siempre).'
+handler.desc = 'Hablá con Miku (IA) — responde si le contestás un mensaje suyo, la mencionás, o le escribís por privado. En grupos también se suma sola a la charla de vez en cuando (ver .iamodo para que participe siempre).'
 handler.tags = ['ia']
-handler.command = ['ai', 'miku', 'gemini']
+handler.command = ['ai', 'miku']
 
 export default handler

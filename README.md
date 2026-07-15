@@ -90,7 +90,7 @@ const config = {
 }
 ```
 
-Y si vas a usar el módulo de IA (Gemini) o las alertas de Aternos más adelante, copiá `.env.example` a `.env` y completá las variables ahí — ningún dato sensible va en `config.js`.
+Y si vas a usar el módulo de IA (Groq) o el estado del servidor de Aternos, copiá `.env.example` a `.env` y completá las variables ahí — ningún dato sensible va en `config.js`.
 
 ```bash
 cp .env.example .env
