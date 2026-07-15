@@ -13,7 +13,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
   await m.reply(`*『 📥 』Descargando de Instagram...*`)
   
   try {
-    const { data: apiResponse } = await axios.get(`https://luxinfinity.vercel.app/api/ig?url=${encodeURIComponent(text)}`)
+    const { data: apiResponse } = await axios.get(`https://luxinfinity.vercel.app/api/ig?url=${encodeURIComponent(text)}`, { timeout: 15000 })
     
     if (!apiResponse.status || !apiResponse.data || !apiResponse.data.items || apiResponse.data.items.length === 0) {
       return m.reply(`*『 ✙ 』SIN CONTENIDO.*\n> No se encontró media en ese enlace o es un perfil privado.`)

@@ -137,12 +137,17 @@ async function startBot() {
 
   conn.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return
+    // Antes se hacía `await handler(...)` en el loop, uno por uno — si UN
+    // mensaje se colgaba en algo (una descarga externa lenta, un socket
+    // raro), el resto de los mensajes (de cualquier chat, de cualquier
+    // persona) quedaba esperando detrás sin procesarse, y el bot parecía
+    // mudo del todo hasta que esa promesa colgada se resolviera. Ahora cada
+    // mensaje se procesa independiente (sin await acá), así uno colgado no
+    // frena a los demás.
     for (const msg of messages) {
-      try {
-        await handler(conn, msg)
-      } catch (e) {
+      handler(conn, msg).catch(e => {
         console.error(chalk.bold.bgRed.white(' [HANDLER ERROR] '), chalk.bold.redBright(e.stack || e.message))
-      }
+      })
     }
   })
 }

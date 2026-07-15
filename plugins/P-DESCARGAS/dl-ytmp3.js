@@ -29,7 +29,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 
     try {
       const queryToFetch = videoQuery.length === 11 && !videoQuery.includes(' ') ? `https://youtu.be/${videoQuery}` : videoQuery
-      const { data: apiResponse } = await axios.get(`https://luxinfinity.vercel.app/api/youtube?query=${encodeURIComponent(queryToFetch)}&type=audio`)
+      const { data: apiResponse } = await axios.get(`https://luxinfinity.vercel.app/api/youtube?query=${encodeURIComponent(queryToFetch)}&type=audio`, { timeout: 15000 })
       
       if (!apiResponse.status || !apiResponse.data || !apiResponse.data.url) throw new Error('API failed')
       
@@ -78,7 +78,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
   
   let videoInfo = {}
   try {
-    const { data: apiResponse } = await axios.get(`https://luxinfinity.vercel.app/api/youtube?query=${encodeURIComponent(text)}&type=video`)
+    const { data: apiResponse } = await axios.get(`https://luxinfinity.vercel.app/api/youtube?query=${encodeURIComponent(text)}&type=video`, { timeout: 15000 })
     if (!apiResponse.status || !apiResponse.data) throw new Error()
     
     const res = apiResponse.data

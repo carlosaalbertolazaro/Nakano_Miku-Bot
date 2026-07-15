@@ -13,7 +13,14 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
   await m.reply(`*『 📥 』Descargando de TikTok...*`)
   
   try {
-    const response = await fetch(`https://luxinfinity.vercel.app/api/tiktok?url=${encodeURIComponent(text)}`)
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 15000)
+    let response
+    try {
+      response = await fetch(`https://luxinfinity.vercel.app/api/tiktok?url=${encodeURIComponent(text)}`, { signal: controller.signal })
+    } finally {
+      clearTimeout(timer)
+    }
     const json = await response.json()
 
     if (!json.status || !json.data) return m.reply(`*『 ❌ 』ERROR.*\n> No se pudo obtener respuesta del servidor.`)
