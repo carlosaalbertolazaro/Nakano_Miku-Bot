@@ -111,16 +111,27 @@ const handler = async (m, { text }) => {
   await responder(m, { rawText: text, apiPrompt, model: MODEL_SMART, directo: true })
 }
 
+// Mensajes tipo "Bot <algo>" — el estilo de invocación de OTROS bots del
+// grupo (ej. Nekos Club, que no usa un prefijo como el nuestro sino la
+// palabra "Bot" al principio). Sin este filtro, Miku los guardaba como
+// contexto de charla normal y a veces hasta les contestaba, mezclando
+// nombres de gente que en realidad le estaba hablando al otro bot.
+function esParaOtroBot(text) {
+  return /^bot\b/i.test(text)
+}
+
 handler.all = async function (m, { conn, groupDb }) {
   if (m.fromMe || m.isBaileys || !m.sender || !m.message) return
 
   const body = m.body || ''
   const esComando = config.prefix.test(body)
+  const paraOtroBot = esParaOtroBot(body.trim())
 
-  // Guarda todo mensaje real de chat grupal (que no sea un comando) como
-  // contexto, se use o no en esta pasada — así cuando Miku sí participa
-  // (mencionada o espontáneamente) ya sabe de qué se viene hablando.
-  if (m.isGroup && body.trim() && !esComando) {
+  // Guarda todo mensaje real de chat grupal (que no sea un comando ni algo
+  // dirigido a otro bot) como contexto, se use o no en esta pasada — así
+  // cuando Miku sí participa (mencionada o espontáneamente) ya sabe de qué
+  // se viene hablando.
+  if (m.isGroup && body.trim() && !esComando && !paraOtroBot) {
     recordGroupMessage(m.chat, m.pushName || 'Alguien', body.trim())
   }
 
@@ -144,6 +155,7 @@ handler.all = async function (m, { conn, groupDb }) {
   if (!m.isGroup) return
   if (groupDb?.disabledCategories?.includes('ia')) return
   if (!body.trim()) return
+  if (paraOtroBot) return // no participar en mensajes tipo "Bot <algo>" dirigidos a otro bot del grupo
 
   const modo = groupDb?.aiMode || 'normal'
   if (modo === 'silencio') return // solo responde si le hablan directo — ya se resolvió más arriba
