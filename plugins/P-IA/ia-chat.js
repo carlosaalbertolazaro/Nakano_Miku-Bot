@@ -24,7 +24,10 @@ const MAX_CONTEXT_MESSAGES = 6 // mensajes recientes del grupo que se le dan de 
 const MAX_CONTEXT_LINE_LENGTH = 200 // trunca mensajes larguísimos antes de meterlos en el contexto
 const SPONTANEOUS_CHANCE = 0.10 // 10% de probabilidad por mensaje "elegible" en modo normal
 const SPONTANEOUS_MIN_LENGTH = 8 // ignora mensajes muy cortos (evita ruido tipo "jaja", "ok")
-const CONSTANT_MODE_COOLDOWN_SEC = 4 // solo para no disparar 2 respuestas por mensajes casi simultáneos
+// 10s en vez de 4: en un grupo muy activo, contestar cada 4s sin parar
+// satura la conexión de WhatsApp (los envíos empiezan a colgarse y el bot
+// queda mudo para todo, no solo para la IA) — visto en vivo con Carlos.
+const CONSTANT_MODE_COOLDOWN_SEC = 10
 
 // "Relevante" = tiene al menos una letra de verdad. Filtra mensajes de solo
 // emojis/stickers/signos de puntuación (👍, 😂😂😂, "...") que antes también
