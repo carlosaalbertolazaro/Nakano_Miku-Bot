@@ -1,9 +1,8 @@
 import TagDb from '../../lib/database/TagDb.js'
 
-// Comando explícito (no scanea texto libre con '#') porque config.prefix ya
-// incluye '#' como prefijo de comando válido — un trigger pasivo tipo
-// "#nombre mensaje" sería ambiguo con un intento de comando real. Se
-// mantiene la misma UX basada en subcomandos que el resto del bot.
+// Comando explícito (no scanea texto libre con '#') para no ser ambiguo con
+// un intento de comando real si el prefijo configurado llegara a ser '#'.
+// Se mantiene la misma UX basada en subcomandos que el resto del bot.
 const TAG_RX = /^[a-z0-9_]{2,20}$/
 
 function normalizarTag(s) {

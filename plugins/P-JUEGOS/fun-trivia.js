@@ -1,6 +1,7 @@
 import { fetchTriviaQuestion, CATEGORIES } from '../../lib/opentdb.js'
 import UserDb from '../../lib/database/UserDb.js'
 import { grantXp } from '../../lib/economy.js'
+import config from '../../config.js'
 
 // Respuestas por TEXTO PLANO (número 1-4, con o sin prefijo), no por botones
 // nativos de WhatsApp: los mensajes de botones/listas dejaron de ser
@@ -18,13 +19,13 @@ function endSession(chat) {
   sessions.delete(chat)
 }
 
-// Acepta "1".."4" con o sin el prefijo configurado (".1", "1", etc.) — pero
+// Acepta "1".."4" con o sin el prefijo configurado (ej. ".1", "1") — pero
 // NUNCA choca con los movimientos de fun-ttt.js ("1".."9"), porque esos se
 // registran en cmdMap y por lo tanto solo se disparan CON prefijo, mientras
 // que este chequeo corre en handler.all (pasa por fuera de cmdMap) y evalúa
 // el texto crudo del mensaje.
 function parseAnswerDigit(body) {
-  const stripped = String(body || '').replace(/^[.#/!]/, '').trim()
+  const stripped = String(body || '').replace(config.prefix, '').trim()
   if (!/^[1-4]$/.test(stripped)) return null
   return parseInt(stripped, 10) - 1
 }

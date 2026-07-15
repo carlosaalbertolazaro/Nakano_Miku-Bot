@@ -3,7 +3,11 @@ const config = {
   botFullName: 'Nakano Miku',
   ownerName: 'Carlos',
   version: '1.0.0',
-  prefix: /^[.#/!]/,
+  // Prefijo de comandos. Antes aceptaba . # / ! juntos, pero '#' se cruzaba
+  // con el prefijo de otro bot (Nekos Club) en grupos donde conviven los
+  // dos — se dejó solo el punto. Cambialo vos mismo si querés (ej. volver a
+  // /^[.#/!]/ para aceptar varios, o /^!/ para usar solo "!").
+  prefix: /^\./,
   ownerNumber: ['549XXXXXXXXXX'],  // ← Cambia por tu número
   MODE: 'public',
   usePairingCode: true,
