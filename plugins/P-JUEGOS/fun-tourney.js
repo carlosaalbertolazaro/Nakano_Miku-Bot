@@ -1,6 +1,5 @@
 import UserDb from '../../lib/database/UserDb.js'
 import { grantXp } from '../../lib/economy.js'
-import config from '../../config.js'
 
 // Torneo relámpago de eliminación simple. Un solo torneo activo por grupo a
 // la vez (Map en memoria, mismo patrón self-contained que fun-ttt.js /
@@ -9,6 +8,10 @@ import config from '../../config.js'
 // de líneas para armar un bracket gráfico sin poder probarlo en vivo, así que
 // se optó por texto (igual de legible en WhatsApp, y coherente con el resto
 // del bot que ya usa mucho box-drawing).
+//
+// Todo se maneja con SUBCOMANDOS DE TEXTO (.torneo unirse / .torneo ganador
+// a|b), no con botones nativos de WhatsApp — dejaron de ser confiables para
+// números no verificados como negocio.
 const sessions = new Map() // chatId -> session
 
 const REG_TIMEOUT_MS = 3 * 60 * 1000
@@ -78,15 +81,10 @@ async function announceRegistration(conn, m, session) {
       `> Organiza: @${session.organizer.split('@')[0]}\n` +
       `> Cupo: ${session.players.length}/${MAX_PLAYERS}\n\n` +
       `*『 📋 Anotados 』*\n${lista}\n\n` +
-      `> El organizador (o un admin) inicia con *.torneo iniciar* cuando estén todos (mínimo 2).\n` +
+      `> ✍️ Escribí *.torneo unirse* para anotarte.\n` +
+      `> ▶️ El organizador (o un admin) inicia con *.torneo iniciar* cuando estén todos (mínimo 2).\n` +
       `*┗━━━━•❅•°•❈•°•❅•━━━━┛*`,
-    footer: config.botName,
     mentions: session.players,
-    buttons: [{
-      text: 'Anotarme 🎮',
-      sections: [{ title: '✧ Torneo ✧', rows: [{ title: '🙋 Anotarme', description: 'Unirte al torneo', id: 'tourney_join' }] }]
-    }],
-    headerType: 1
   }, { quoted: m })
 }
 
@@ -99,21 +97,11 @@ async function announceMatch(conn, m, session) {
     text: `*┏━━•❈ 🏆 RONDA ${session.round} ❈•━━┓*\n\n` +
       `> *Partido ${session.currentMatchIndex + 1}/${session.matches.length}*\n\n` +
       `> 🅰️ ${nombreA}\n> 🆚\n> 🅱️ ${nombreB}\n\n` +
-      `> El organizador o un admin reporta quién ganó tocando un botón.\n` +
+      `> El organizador o un admin reporta con:\n` +
+      `> *.torneo ganador a* → gana ${nombreA}\n` +
+      `> *.torneo ganador b* → gana ${nombreB}\n` +
       `*┗━━━━•❅•°•❈•°•❅•━━━━┛*`,
-    footer: config.botName,
     mentions: [match.a, match.b],
-    buttons: [{
-      text: 'Reportar ganador 🏅',
-      sections: [{
-        title: '✧ ¿Quién ganó? ✧',
-        rows: [
-          { title: `🅰️ Ganó ${nombreA}`, description: '', id: 'tourney_report_a' },
-          { title: `🅱️ Ganó ${nombreB}`, description: '', id: 'tourney_report_b' },
-        ]
-      }]
-    }],
-    headerType: 1
   }, { quoted: m })
 }
 
@@ -269,19 +257,21 @@ async function handleStatus(m, ctx) {
   )
 }
 
-async function handleReport(m, ctx, btnId) {
+async function handleReport(m, ctx, side) {
   const session = sessions.get(m.chat)
-  if (!session || session.state !== 'in_progress') return
+  if (!session || session.state !== 'in_progress') {
+    return m.reply(`*『 ❕ 』No hay ningún partido esperando resultado ahora.*`)
+  }
 
   if (!canManage(session, m, ctx)) {
     return m.reply(`*『 👤 』Solo el organizador o un admin pueden reportar el resultado.*`)
   }
 
   const match = session.matches[session.currentMatchIndex]
-  if (!match || match.winner) return // ya se reportó (evita doble click)
+  if (!match || match.winner) return // ya se reportó (evita doble reporte)
 
   // Marcado sincrónico antes de cualquier await, mismo patrón que gacha/pokemon/trivia.
-  match.winner = btnId === 'tourney_report_a' ? match.a : match.b
+  match.winner = side === 'a' ? match.a : match.b
 
   await advance(ctx.conn, m, session)
 }
@@ -289,22 +279,25 @@ async function handleReport(m, ctx, btnId) {
 const handler = async (m, ctx) => {
   if (!m.isGroup) return m.reply(`*『 👥 』SOLO GRUPOS.*\n> Los torneos solo funcionan en grupos.`)
 
-  const btnId = m.responseId
-  if (btnId === 'tourney_join') return handleJoin(m, ctx)
-  if (btnId === 'tourney_report_a' || btnId === 'tourney_report_b') return handleReport(m, ctx, btnId)
-  if (btnId) return
-
   const sub = (ctx.args[0] || '').toLowerCase()
+  if (['unirse', 'join', 'anotarme'].includes(sub)) return handleJoin(m, ctx)
   if (['iniciar', 'start', 'comenzar'].includes(sub)) return handleStart(m, ctx)
   if (['cancelar', 'cancel'].includes(sub)) return handleCancel(m, ctx)
   if (['estado', 'status'].includes(sub)) return handleStatus(m, ctx)
+  if (sub === 'ganador' || sub === 'winner') {
+    const side = (ctx.args[1] || '').toLowerCase()
+    if (side !== 'a' && side !== 'b') {
+      return m.reply(`*『 ℹ️ 』USO*\n> ${ctx.usedPrefix}torneo ganador a\n> ${ctx.usedPrefix}torneo ganador b`)
+    }
+    return handleReport(m, ctx, side)
+  }
 
   return handleNew(m, ctx)
 }
 
-handler.help = ['torneo', 'torneo iniciar', 'torneo cancelar', 'torneo estado']
+handler.help = ['torneo', 'torneo unirse', 'torneo iniciar', 'torneo ganador a|b', 'torneo cancelar', 'torneo estado']
 handler.tags = ['juegos']
-handler.command = ['torneo', 'tourney', 'tourney_join', 'tourney_report_a', 'tourney_report_b']
+handler.command = ['torneo', 'tourney']
 handler.groupOnly = true
 
 export default handler

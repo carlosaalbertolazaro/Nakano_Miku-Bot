@@ -9,8 +9,8 @@ const messageCounters = new Map() // chatId -> count
 const spawnThresholds  = new Map() // chatId -> umbral del próximo spawn
 const pendingSpawns     = new Map() // chatId -> { pokemon, caught, timer }
 
-const MIN_MSGS = 15
-const MAX_MSGS = 35
+const MIN_MSGS = 80
+const MAX_MSGS = 160
 const CATCH_WINDOW_MS = 90_000
 const CATCH_REWARD = { comun: 15, legendario: 60, mitico: 120 }
 const SHINY_BONUS = 100

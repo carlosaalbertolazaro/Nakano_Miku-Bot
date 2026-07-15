@@ -1,20 +1,13 @@
-import * as baileysMod from '@whiskeysockets/baileys'
 import config from '../../config.js'
 import { plugins } from '../../handler.js'
 
-const pkg = baileysMod.default && Object.keys(baileysMod).length === 1 ? baileysMod.default : baileysMod
-const { prepareWAMessageMedia, generateWAMessageFromContent } = pkg
-
 const START_TIME = Date.now()
 
-// Cambiá estas imágenes por las tuyas
-const IMAGENES = [
-  'https://i.ibb.co/ZzDLjShT/6-Pdo7j-Jq-fond-decran-Gojo-Sotaru-49.jpg',
-  'https://i.ibb.co/gstbvMx/wp11845569.jpg',
-  'https://i.ibb.co/TB83V4cy/thumbbig-1334857.jpg',
-  'https://i.ibb.co/VWS1C2Jj/gojo-satoru-holding-his-face-iyrluirbzvncz77a.jpg',
-  'https://i.ibb.co/whMxn3nF/Rty-Ri9-Rc-fond-decran-Gojo-Sotaru-63.jpg',
-]
+// TODO: reemplazar por imágenes propias de Nakano Miku (subilas a un host de
+// imágenes tipo ibb.co/imgur y pegá los links acá). Se deja vacío a
+// propósito: no queremos hotlinkear imágenes de otros personajes/servicios
+// sin verificar que el link sea estable y correcto.
+const IMAGENES = []
 
 const ETIQUETAS = {
   info:          'ℹ️  Información',
@@ -56,24 +49,19 @@ function getCategorias(isOwner, groupDb) {
 
 function getOrdenActivo(isOwner, groupDb) {
   const { categorias, total } = getCategorias(isOwner, groupDb)
-  const orden = ['info', 'group', 'descargas', 'convertidores', 'juegos', 'tools', 'otros']
+  const orden = ['info', 'group', 'descargas', 'convertidores', 'juegos', 'economia', 'anime', 'pokemon', 'cartas', 'tools', 'otros']
   const ordenFinal = orden.filter(k => categorias[k]?.length).concat(
     Object.keys(categorias).filter(k => !orden.includes(k))
   )
   return { categorias, total, ordenFinal }
 }
 
-const getContextInfo = (conn, m) => ({
-  mentionedJid: [m.sender],
-  forwardingScore: 999,
-  isForwarded: true,
-  forwardedNewsletterMessageInfo: {
-    newsletterJid: global.newsletterJid || '120363403631501323@newsletter',
-    newsletterName: `${conn.botname || config.botName} - ${config.ownerName}`,
-    serverMessageId: Math.floor(Math.random() * 999) + 1,
-  }
-})
-
+// Mensajes de texto plano únicamente. Los botones/listas nativas de WhatsApp
+// (nativeFlowMessage, buttons:[{sections}]) dejaron de ser confiables para
+// cuentas/números no verificados como negocio — a veces no responden al
+// toque, a veces el destinatario ve "mensaje no compatible con tu versión de
+// WhatsApp". Texto plano funciona siempre, sin importar la versión del
+// cliente. Los atajos .menu1..menu20 ya existían como comandos de texto.
 async function enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb) {
   const { categorias } = getOrdenActivo(isOwner, groupDb)
   const comandos = categorias[tag]
@@ -81,40 +69,22 @@ async function enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb) {
 
   const nombreCat = ETIQUETAS[tag] || ETIQUETAS.otros
   const prefix = usedPrefix || '.'
-  const linkCanal = config.groupLink || 'https://whatsapp.com'
-  const currentBotName = conn.botname || config.botName
 
   let caption = `┌─────────────────\n`
   caption += `└┐  *${nombreCat.toUpperCase()}*\n`
   caption += `┌┤\n`
   for (const cmd of comandos) caption += `││  ${prefix}${cmd}\n`
   caption += `│└──⊷\n`
-  caption += `└─────────────────`
+  caption += `└─────────────────\n\n`
+  caption += `> 🔙 Escribí *${prefix}menu* para volver al menú principal.`
 
-  const imageUrl = IMAGENES[Math.floor(Math.random() * IMAGENES.length)]
-  const media = await prepareWAMessageMedia({ image: { url: imageUrl } }, { upload: conn.waUploadToServer })
+  const imageUrl = IMAGENES.length ? IMAGENES[Math.floor(Math.random() * IMAGENES.length)] : null
 
-  const msg = generateWAMessageFromContent(m.chat, {
-    viewOnceMessage: {
-      message: {
-        messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
-        interactiveMessage: {
-          body: { text: caption },
-          footer: { text: `© ${new Date().getFullYear()} ${currentBotName}` },
-          header: { hasMediaAttachment: true, imageMessage: media.imageMessage },
-          nativeFlowMessage: {
-            buttons: [
-              { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '🔙 Volver al Menú', id: `${prefix}menu` }) },
-              { name: 'cta_url', buttonParamsJson: JSON.stringify({ display_text: '📢 Canal', url: linkCanal, merchant_url: linkCanal }) }
-            ]
-          },
-          contextInfo: getContextInfo(conn, m)
-        }
-      }
-    }
-  }, { quoted: m })
-
-  await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
+  if (imageUrl) {
+    await conn.sendMessage(m.chat, { image: { url: imageUrl }, caption }, { quoted: m })
+  } else {
+    await m.reply(caption)
+  }
 }
 
 const handler = async (m, { conn, usedPrefix, isOwner, command, groupDb }) => {
@@ -132,16 +102,11 @@ const handler = async (m, { conn, usedPrefix, isOwner, command, groupDb }) => {
   const prefix = usedPrefix || '.'
   const currentBotName = conn.botname || config.botName
 
-  const rows = ordenFinal.map((tag, i) => {
+  const listaCategorias = ordenFinal.map((tag, i) => {
     const nombreCat = ETIQUETAS[tag] || ETIQUETAS.otros
     const n = categorias[tag]?.length || 0
-    return {
-      header: nombreCat.toUpperCase(),
-      title: 'Ver comandos',
-      description: `${n} comandos · Escribe ${prefix}menu${i + 1}`,
-      id: `menu_cat_${tag}`
-    }
-  })
+    return `> *${i + 1}.* ${nombreCat} — ${n} comandos · escribí *${prefix}menu${i + 1}*`
+  }).join('\n')
 
   const textoMenu =
 `*┏━━•❈ 🤖 ${currentBotName} ❈•━━┓*
@@ -154,52 +119,16 @@ const handler = async (m, { conn, usedPrefix, isOwner, command, groupDb }) => {
 ▢ ⏱️ *Activo:* ${getTime()}
 ▢ 📦 *Comandos:* ${total}
 
-> Tocá el botón para ver los comandos.
+*『 📁 CATEGORÍAS 』*
+${listaCategorias}
 *┗━━━━•❅•°•❈•°•❅•━━━━┛*`
 
-  const imageUrl = IMAGENES[Math.floor(Math.random() * IMAGENES.length)]
-  const media = await prepareWAMessageMedia({ image: { url: imageUrl } }, { upload: conn.waUploadToServer })
+  const imageUrl = IMAGENES.length ? IMAGENES[Math.floor(Math.random() * IMAGENES.length)] : null
 
-  const msg = generateWAMessageFromContent(m.chat, {
-    viewOnceMessage: {
-      message: {
-        messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
-        interactiveMessage: {
-          body: { text: textoMenu },
-          footer: { text: `© ${new Date().getFullYear()} ${currentBotName}` },
-          header: { hasMediaAttachment: true, imageMessage: media.imageMessage },
-          nativeFlowMessage: {
-            buttons: [
-              {
-                name: 'single_select',
-                buttonParamsJson: JSON.stringify({
-                  title: '📁 SELECCIONAR MENÚ',
-                  sections: [{ title: '🌟 CATEGORÍAS', rows }]
-                })
-              },
-              {
-                name: 'cta_url',
-                buttonParamsJson: JSON.stringify({
-                  display_text: '📢 Canal',
-                  url: config.groupLink || 'https://whatsapp.com',
-                  merchant_url: config.groupLink || 'https://whatsapp.com'
-                })
-              }
-            ]
-          },
-          contextInfo: getContextInfo(conn, m)
-        }
-      }
-    }
-  }, { quoted: m })
-
-  await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
-}
-
-handler.all = async (m, { conn, isOwner, usedPrefix, groupDb }) => {
-  if (m.responseId?.startsWith('menu_cat_')) {
-    const tag = m.responseId.replace('menu_cat_', '')
-    await enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb)
+  if (imageUrl) {
+    await conn.sendMessage(m.chat, { image: { url: imageUrl }, caption: textoMenu }, { quoted: m })
+  } else {
+    await m.reply(textoMenu)
   }
 }
 

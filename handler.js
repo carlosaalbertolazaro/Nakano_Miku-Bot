@@ -117,8 +117,18 @@ function isSpamming(jid) {
 function getAdminStatus(participants, jid) {
   if (!jid || !participants?.length) return false
   const clean = jidNorm(jid)
+  const cleanNum = extraerNum(jid)
   return participants.some(p => {
-    const matched = jidNorm(p.id) === clean || (p.lid && jidNorm(p.lid) === clean)
+    // WhatsApp viene migrando cuentas a identificadores @lid (privados, no
+    // ligados al número de teléfono) en paralelo a los @s.whatsapp.net de
+    // siempre — el mismo participante puede aparecer con formatos distintos
+    // según de dónde salga el JID. Comparamos por id, por lid, y como último
+    // recurso por los dígitos del número (cuando ambos lados son numéricos).
+    const matched =
+      jidNorm(p.id) === clean ||
+      (p.lid && jidNorm(p.lid) === clean) ||
+      (cleanNum && extraerNum(p.id) === cleanNum) ||
+      (cleanNum && p.lid && extraerNum(p.lid) === cleanNum)
     return matched && (p.admin === 'admin' || p.admin === 'superadmin' || p.isCommunityAdmin)
   })
 }
@@ -279,7 +289,17 @@ export async function handler(conn, m) {
 
   if (plugin.ownerOnly && !esOwner) return m.reply(`*『 👑 』SOLO OWNER.*\n> @${userTag}, este comando es exclusivo del dueño del bot.`)
   if (plugin.groupOnly && !m.isGroup) return m.reply(`*『 👥 』SOLO GRUPOS.*\n> @${userTag}, este comando solo funciona en grupos.`)
-  if (plugin.adminOnly && !esAdmin && !esOwner) return m.reply(`*『 👤 』SOLO ADMINS.*\n> @${userTag}, necesitás ser admin para usar este comando.`)
+  if (plugin.adminOnly && !esAdmin && !esOwner) {
+    // Diagnóstico para el problema conocido de detección de admin (JIDs
+    // @lid vs @s.whatsapp.net). Se loguea SOLO cuando efectivamente se
+    // bloquea a alguien, para poder ver en la consola exactamente qué JID
+    // mandó el mensaje contra qué lista de participantes se comparó.
+    console.log(chalk.bold.bgYellow.black(' [ADMIN CHECK FALLÓ] '))
+    console.log(chalk.yellow(`  m.sender: ${m.sender}`))
+    console.log(chalk.yellow(`  m.author: ${m.author}`))
+    console.log(chalk.yellow(`  participantes: ${JSON.stringify(participants.map(p => ({ id: p.id, lid: p.lid, admin: p.admin })))}`))
+    return m.reply(`*『 👤 』SOLO ADMINS.*\n> @${userTag}, necesitás ser admin para usar este comando.`)
+  }
   if (plugin.botAdminOnly && !esBotAdmin) return m.reply(`*『 🤖 』BOT SIN PERMISOS.*\n> @${userTag}, hacé al bot administrador para usar esto.`)
 
   const text = args.join(' ')
