@@ -8,6 +8,7 @@ import chalk from 'chalk'
 import config from './config.js'
 import { handler, loadPlugins, setupWatchers } from './handler.js'
 import { msgRetryCache } from './lib/caches.js'
+import { startEventScheduler } from './lib/eventScheduler.js'
 
 const pkg = baileysMod.default && Object.keys(baileysMod).length === 1 ? baileysMod.default : baileysMod
 const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, Browsers } = pkg
@@ -111,6 +112,7 @@ async function startBot() {
 
       await loadPlugins()
       setupWatchers(conn)
+      startEventScheduler(conn)
     }
   })
 
@@ -120,6 +122,12 @@ async function startBot() {
       await manejarParticipantes(conn, data)
     } catch (e) {
       console.error(chalk.bold.bgRed.white(' [WELCOME EVENT ERROR] '), chalk.bold.redBright(e.stack || e.message))
+    }
+    try {
+      const { manejarVerificacion } = await import('./plugins/P-GRUPOS/grupo-verify.js')
+      await manejarVerificacion(conn, data)
+    } catch (e) {
+      console.error(chalk.bold.bgRed.white(' [VERIFY EVENT ERROR] '), chalk.bold.redBright(e.stack || e.message))
     }
   })
 
