@@ -130,7 +130,11 @@ const handler = async (m, { conn, command }) => {
   const mentions = target ? [m.sender, target] : [m.sender]
 
   try {
-    await conn.sendMessage(m.chat, { image: gifBuffer || { url: gif.url }, caption, mentions }, { quoted: m })
+    // video + gifPlayback:true (no image) para que WhatsApp lo reproduzca
+    // animado en loop — un mensaje de imagen, aunque el archivo sea un gif
+    // real, siempre se muestra estático. Reusa el helper m.replyVideo que
+    // ya existía en el codebase para esto mismo.
+    await m.replyVideo(gifBuffer || { url: gif.url }, caption, true, { mentions })
   } catch {
     await m.reply(caption)
   }
