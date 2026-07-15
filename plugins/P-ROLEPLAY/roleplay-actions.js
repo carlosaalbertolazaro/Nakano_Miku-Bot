@@ -1,4 +1,4 @@
-import { fetchReactionGif } from '../../lib/nekosbest.js'
+import { fetchReactionGif, downloadReactionGifBuffer } from '../../lib/nekosbest.js'
 
 // Todas las acciones vienen de endpoints REALES y verificados de nekos.best
 // (GET /api/v2/endpoints), no inventados. Cada acción tiene un alias en
@@ -102,10 +102,17 @@ const handler = async (m, { conn, command }) => {
   if (!action) return
 
   let gif
+  let gifBuffer = null
   try {
     gif = await fetchReactionGif(action.endpoint)
+    gifBuffer = await downloadReactionGifBuffer(gif.url)
   } catch (e) {
-    return m.reply(`*『 ❌ 』ERROR*\n> No se pudo obtener el gif ahora mismo. Probá de nuevo en un rato.\n> _${e.message}_`)
+    if (!gif) {
+      return m.reply(`*『 ❌ 』ERROR*\n> No se pudo obtener el gif ahora mismo. Probá de nuevo en un rato.\n> _${e.message}_`)
+    }
+    // Se consiguió el link pero falló la descarga — seguimos igual con la
+    // URL directa como último recurso (puede fallar de nuevo, pero es mejor
+    // intentarlo que no mandar nada).
   }
 
   const target = m.mentionedJid?.[0] || (m.quoted ? m.quoted.sender : null)
@@ -123,7 +130,7 @@ const handler = async (m, { conn, command }) => {
   const mentions = target ? [m.sender, target] : [m.sender]
 
   try {
-    await conn.sendMessage(m.chat, { image: { url: gif.url }, caption, mentions }, { quoted: m })
+    await conn.sendMessage(m.chat, { image: gifBuffer || { url: gif.url }, caption, mentions }, { quoted: m })
   } catch {
     await m.reply(caption)
   }
