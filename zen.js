@@ -10,6 +10,7 @@ import { handler, loadPlugins, setupWatchers } from './handler.js'
 import { msgRetryCache } from './lib/caches.js'
 import { startEventScheduler } from './lib/eventScheduler.js'
 import { startAiringScheduler } from './lib/animeAiringScheduler.js'
+import { startAternosScheduler } from './lib/aternosScheduler.js'
 
 const pkg = baileysMod.default && Object.keys(baileysMod).length === 1 ? baileysMod.default : baileysMod
 const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, Browsers } = pkg
@@ -115,6 +116,7 @@ async function startBot() {
       setupWatchers(conn)
       startEventScheduler(conn)
       startAiringScheduler(conn)
+      startAternosScheduler(conn)
     }
   })
 
