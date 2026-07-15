@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=800&size=42&pause=2000&color=FF6FA5&center=true&vCenter=true&width=600&height=80&lines=Miku+%F0%9F%8E%80;Nakano+Miku+%E2%80%A2+WhatsApp+Bot" alt="Miku"/>
+  <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=800&size=42&pause=2000&color=FF6FA5&center=true&vCenter=true&width=600&height=80&lines=Miku+%F0%9F%8E%80;NNakano+Miku+%E2%80%A2+WhatsApp+Bot" alt="Miku"/>
 </div>
 
 <div align="center">
