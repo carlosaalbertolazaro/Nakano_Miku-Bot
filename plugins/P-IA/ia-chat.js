@@ -21,7 +21,8 @@ import { aiCooldownCache, aiSpontaneousCooldownCache } from '../../lib/caches.js
 //    ráfagas de mensajes seguidos). Al desactivarlo vuelve al modo
 //    espontáneo normal.
 const MAX_HISTORY_TURNS = 6 // 6 idas y vueltas (12 entradas: usuario+modelo)
-const MAX_CONTEXT_MESSAGES = 12 // mensajes recientes del grupo que se le dan de contexto
+const MAX_CONTEXT_MESSAGES = 6 // mensajes recientes del grupo que se le dan de contexto (achicado para no comerse el límite de tokens/minuto de Groq)
+const MAX_CONTEXT_LINE_LENGTH = 200 // trunca mensajes larguísimos antes de meterlos en el contexto
 const SPONTANEOUS_CHANCE = 0.15 // 15% de probabilidad por mensaje "elegible" en modo normal
 const SPONTANEOUS_MIN_LENGTH = 8 // ignora mensajes muy cortos (evita ruido tipo "jaja", "ok")
 const CONSTANT_MODE_COOLDOWN_SEC = 4 // solo para no disparar 2 respuestas por mensajes casi simultáneos
@@ -44,7 +45,8 @@ function pushHistory(jid, userText, modelText) {
 function recordGroupMessage(chat, name, text) {
   if (!groupHistory.has(chat)) groupHistory.set(chat, [])
   const arr = groupHistory.get(chat)
-  arr.push({ name, text })
+  const recortado = text.length > MAX_CONTEXT_LINE_LENGTH ? text.slice(0, MAX_CONTEXT_LINE_LENGTH) + '…' : text
+  arr.push({ name, text: recortado })
   while (arr.length > MAX_CONTEXT_MESSAGES) arr.shift()
 }
 
@@ -83,10 +85,14 @@ async function responder(m, { rawText, apiPrompt, silent = false, model = MODEL_
 }
 
 const handler = async (m, { text }) => {
+  // OJO: acá NO se agrega buildContextBlock() a propósito. Meter los
+  // mensajes recientes de otras personas del grupo en una pregunta directa
+  // ("quién soy") confundía al modelo y terminaba dirigiéndose a esas otras
+  // personas por nombre en vez de responderle solo a quien preguntó. El
+  // contexto grupal queda reservado para el modo espontáneo/constante, que
+  // es donde realmente hace falta.
   const nombre = senderLabel(m)
-  const apiPrompt = m.isGroup
-    ? `${buildContextBlock(m.chat)}${nombre} te escribe: ${text}`
-    : `${nombre} te escribe por privado: ${text}`
+  const apiPrompt = `${nombre} te escribe${m.isGroup ? '' : ' por privado'}: ${text}`
   await responder(m, { rawText: text, apiPrompt, model: MODEL_SMART })
 }
 
@@ -110,9 +116,11 @@ handler.all = async function (m, { conn, groupDb }) {
   const esDM = !m.isGroup
 
   if (esDM || esReplyAlBot || loMencionaron) {
+    // Mismo motivo que en el handler de arriba: sin contexto grupal acá,
+    // para que responda solo a quien le habló y no a todo el chat.
     const nombre = senderLabel(m)
     const apiPrompt = m.isGroup
-      ? `${buildContextBlock(m.chat)}${nombre} te habla directamente (te mencionó o te respondió): ${body}`
+      ? `${nombre} te habla directamente (te mencionó o te respondió): ${body}`
       : `${nombre} te escribe por privado: ${body}`
     return responder(m, { rawText: body, apiPrompt, model: MODEL_SMART })
   }
