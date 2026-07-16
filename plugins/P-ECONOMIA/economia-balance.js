@@ -23,8 +23,17 @@ const handler = async (m, { text }) => {
     ? `> 💎 Premium: *${user.premium.tier}*\n`
     : ''
   const bank = user.data?.economy?.bank || 0
+  const profile = user.data?.profile || {}
+
+  const extra = []
+  if (profile.bio) extra.push(`> 📝 ${profile.bio}`)
+  if (profile.genre) extra.push(`> ⚧️ Género: *${profile.genre}*`)
+  if (profile.marriedTo) extra.push(`> 💍 Casado/a con @${profile.marriedTo.split('@')[0]}`)
+  const mentions = [who, ...(profile.marriedTo ? [profile.marriedTo] : [])]
+  const extraBlock = extra.length ? extra.join('\n') + '\n\n' : ''
 
   const texto = `*『 💰 』PERFIL DE ${tag}*\n\n` +
+    extraBlock +
     `> 🏅 Nivel: *${progress.level}*\n` +
     `> ✨ XP: *${progress.into}/${progress.span}*\n` +
     `> ${bar}\n` +
@@ -33,7 +42,7 @@ const handler = async (m, { text }) => {
     premiumLine +
     `\n> 💡 *.rank* tarjeta visual · *.daily* recompensa diaria · *.work*/*.crime* ganar más · *.deposit* proteger tu plata.`
 
-  await m.reply(texto, { mentions: [who] })
+  await m.reply(texto, { mentions })
 }
 
 handler.help = ['bal [@user]']
