@@ -96,6 +96,22 @@ const ACTIONS = {
   nod:         { endpoint: 'nod',        emoji: '🙂', verbo: 'asiente', standalone: true },
   asentir:     { endpoint: 'nod',        emoji: '🙂', verbo: 'asiente', standalone: true },
   nope:        { endpoint: 'nope',       emoji: '🙅', verbo: 'dice que no', standalone: true },
+  lurk:        { endpoint: 'lurk',       emoji: '👀', verbo: 'está acechando por acá', standalone: true },
+  acechar:     { endpoint: 'lurk',       emoji: '👀', verbo: 'está acechando por acá', standalone: true },
+  shoot:       { endpoint: 'shoot',      emoji: '🔫', verbo: 'le apunta con un arma a' },
+  disparar:    { endpoint: 'shoot',      emoji: '🔫', verbo: 'le apunta con un arma a' },
+  peck:        { endpoint: 'peck',       emoji: '😘', verbo: 'le da un piquito a' },
+  piquito:     { endpoint: 'peck',       emoji: '😘', verbo: 'le da un piquito a' },
+  sip:         { endpoint: 'sip',        emoji: '🍵', verbo: 'toma un sorbo tranquilamente', standalone: true },
+  sorber:      { endpoint: 'sip',        emoji: '🍵', verbo: 'toma un sorbo tranquilamente', standalone: true },
+  wag:         { endpoint: 'wag',        emoji: '🐶', verbo: 'menea la cola', standalone: true },
+  menearcola:  { endpoint: 'wag',        emoji: '🐶', verbo: 'menea la cola', standalone: true },
+  teehee:      { endpoint: 'teehee',     emoji: '😝', verbo: 'se ríe con picardía', standalone: true },
+  nya:         { endpoint: 'nya',        emoji: '🐱', verbo: 'hace nya~', standalone: true },
+  lappillow:   { endpoint: 'lappillow',  emoji: '🛌', verbo: 'usa de almohada a' },
+  almohada:    { endpoint: 'lappillow',  emoji: '🛌', verbo: 'usa de almohada a' },
+  shake:       { endpoint: 'shake',      emoji: '🫨', verbo: 'sacude a' },
+  sacudir:     { endpoint: 'shake',      emoji: '🫨', verbo: 'sacude a' },
 }
 
 const handler = async (m, { conn, command }) => {
@@ -151,7 +167,7 @@ const handler = async (m, { conn, command }) => {
 }
 
 handler.help = ['<accion> [@user] — ej: abrazar, besar, acariciar, cachetada, cuddle, patear, morder...']
-handler.desc = 'Reacciones/GIFs de anime para interactuar con alguien (o solo/a). ~40 acciones en español e inglés — abrazar, besar, acariciar, cachetada, cuddle, morder, patear, bailar, llorar, y muchas más.'
+handler.desc = 'Reacciones/GIFs de anime para interactuar con alguien (o solo/a). 50+ acciones en español e inglés — abrazar, besar, acariciar, cachetada, cuddle, morder, patear, bailar, llorar, y muchas más.'
 handler.tags = ['roleplay']
 handler.command = Object.keys(ACTIONS)
 
