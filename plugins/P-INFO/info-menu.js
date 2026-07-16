@@ -57,6 +57,42 @@ function getCategorias(isOwner, groupDb) {
   return { categorias, total }
 }
 
+// Alias en español/inglés para poder pedir una categoría por NOMBRE
+// (".menu economia", ".help stickers") en vez de tener que acordarse el
+// número de página (.menu2, .menu3) — Carlos lo pidió explícitamente,
+// comparando con cómo funciona en Nekos Club.
+const ALIAS_CATEGORIA = {
+  info: ['info', 'informacion'],
+  group: ['group', 'grupo', 'grupos'],
+  tools: ['tools', 'herramientas', 'utilidades', 'utilidad'],
+  descargas: ['descargas', 'descarga', 'downloads'],
+  convertidores: ['convertidores', 'convertidor', 'converter'],
+  stickers: ['stickers', 'sticker', 'figuritas'],
+  juegos: ['juegos', 'minijuegos', 'games', 'juego'],
+  economia: ['economia', 'monedas', 'coins', 'dinero', 'plata'],
+  perfiles: ['perfiles', 'perfil', 'profile'],
+  casino: ['casino'],
+  anime: ['anime', 'gacha', 'waifu', 'waifus'],
+  pokemon: ['pokemon'],
+  cartas: ['cartas', 'yugioh', 'yugi'],
+  roleplay: ['roleplay', 'rol', 'interaccion'],
+  ia: ['ia', 'ai', 'asistente', 'miku'],
+  otros: ['otros', 'other'],
+}
+
+function normalizar(s) {
+  return (s || '').toLowerCase().trim().normalize('NFD').replace(/[^a-z0-9]/g, '')
+}
+
+function resolverCategoriaPorNombre(nombre) {
+  const n = normalizar(nombre)
+  if (!n) return null
+  for (const [tag, alias] of Object.entries(ALIAS_CATEGORIA)) {
+    if (alias.some(a => normalizar(a) === n)) return tag
+  }
+  return null
+}
+
 function getOrdenActivo(isOwner, groupDb) {
   const { categorias, total } = getCategorias(isOwner, groupDb)
   const orden = ['info', 'group', 'descargas', 'convertidores', 'stickers', 'juegos', 'economia', 'perfiles', 'casino', 'anime', 'pokemon', 'cartas', 'roleplay', 'ia', 'tools', 'otros']
@@ -98,7 +134,7 @@ async function enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb) {
   }
 }
 
-const handler = async (m, { conn, usedPrefix, isOwner, command, groupDb }) => {
+const handler = async (m, { conn, usedPrefix, isOwner, command, args, groupDb }) => {
   const { categorias, total, ordenFinal } = getOrdenActivo(isOwner, groupDb)
 
   const numMatch = command.match(/^menu(\d+)$/)
@@ -109,14 +145,22 @@ const handler = async (m, { conn, usedPrefix, isOwner, command, groupDb }) => {
     return m.reply(`*『 ❌ 』Categoría no encontrada.*`)
   }
 
+  // ".menu economia" / ".help stickers" — por nombre, no hace falta
+  // acordarse ningún número de página.
+  if (args[0]) {
+    const tag = resolverCategoriaPorNombre(args[0])
+    if (tag && categorias[tag]?.length) return enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb)
+    return m.reply(`*『 ❌ 』No encontré una categoría llamada "${args[0]}".*\n> Mirá los nombres disponibles con *${usedPrefix || '.'}menu*.`)
+  }
+
   const nombreUsuario = m.pushName || 'Usuario'
   const prefix = usedPrefix || '.'
   const currentBotName = conn.botname || config.botName
 
-  const listaCategorias = ordenFinal.map((tag, i) => {
+  const listaCategorias = ordenFinal.map((tag) => {
     const nombreCat = ETIQUETAS[tag] || ETIQUETAS.otros
     const n = categorias[tag]?.length || 0
-    return `> *${i + 1}.* ${nombreCat} — ${n} comandos · escribí *${prefix}menu${i + 1}*`
+    return `> ${nombreCat} — ${n} comandos · escribí *${prefix}menu ${tag}*`
   }).join('\n')
 
   const textoMenu =

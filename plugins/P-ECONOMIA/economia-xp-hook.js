@@ -1,5 +1,5 @@
 import UserDb from '../../lib/database/UserDb.js'
-import { grantXp, randomXpGain } from '../../lib/economy.js'
+import { grantXp, randomXpGain, isPerkActive } from '../../lib/economy.js'
 import { xpCooldownCache } from '../../lib/caches.js'
 
 // Sin .command a propósito: este plugin no responde a ningún comando, solo
@@ -16,7 +16,7 @@ handler.all = async function (m, { conn }) {
   xpCooldownCache.set(cooldownKey, true)
 
   const user = await UserDb.findOrCreate(m.sender)
-  const amount = randomXpGain()
+  const amount = randomXpGain() * (isPerkActive(user, 'xpBoost') ? 2 : 1)
   const result = grantXp(user, amount)
   await user.save()
 

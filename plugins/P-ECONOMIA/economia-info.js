@@ -16,11 +16,14 @@ const handler = async (m) => {
     `> *.crime* / *.flirt* — más plata, pero podés perder si sale mal\n` +
     `> *.sellwaifu* / *.sellpokemon* / *.vendercarta* — vender lo que reclamaste\n\n` +
     `*『 🎯 En qué gastarlas 』*\n` +
-    `> *.gacha* → *.claim* un personaje, después *.haremshop*/*.sellwaifu* para venderlo\n` +
+    `> *.shop* — perks reales: boost de XP x2, seguro anti-robo, resetear cooldown del gacha\n` +
     `> *.sobre* — sobres de cartas Yu-Gi-Oh\n` +
     `> *.slots* / *.blackjack* / *.ruleta* / *.coinflip* — casino, para multiplicar (o perder) monedas\n` +
     `> *.pay* — regalarle monedas a alguien\n` +
     `> *.deposit* — guardarlas en el banco, a salvo de *.steal*\n\n` +
+    `*『 💘 Para qué sirven las waifus (.gacha) 』*\n` +
+    `> Cada personaje que reclamás te da un bonus en tu *.daily* de por vida — no hace falta venderlas todas.\n` +
+    `> Si igual las querés convertir en plata: *.sellwaifu* (venta instantánea al bot) o *.haremshop*/*.listwaifu* (venderla a otro jugador).\n\n` +
     `> 💡 Todo el que te roba, vende o gana monedas usa el mismo balance — es una sola economía para toda la diversión del bot.\n` +
     `*┗━━━━•❅•°•❈•°•❅•━━━━┛*`
   )

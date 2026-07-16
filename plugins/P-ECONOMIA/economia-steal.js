@@ -1,5 +1,6 @@
 import { jidNormalizedUser } from '@whiskeysockets/baileys'
 import UserDb from '../../lib/database/UserDb.js'
+import { isPerkActive } from '../../lib/economy.js'
 
 const COOLDOWN_MS = 60 * 60 * 1000 // 1h por ladrón
 const SUCCESS_RATE = 0.4
@@ -28,6 +29,9 @@ const handler = async (m, { usedPrefix }) => {
   }
 
   const victim = await UserDb.findOrCreate(target)
+  if (isPerkActive(victim, 'stealShield')) {
+    return m.reply(`*『 🛡️ 』@${target.split('@')[0]} tiene un seguro anti-robo activo (comprado en *.shop*) — no se le puede robar ahora.*`, { mentions: [target] })
+  }
   if (victim.coins < MIN_TARGET_WALLET) {
     return m.reply(`*『 ❌ 』@${target.split('@')[0]} no tiene suficiente plata en la billetera para que valga la pena.*`, { mentions: [target] })
   }
