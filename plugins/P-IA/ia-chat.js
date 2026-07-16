@@ -1,6 +1,6 @@
 import { jidNormalizedUser } from '@whiskeysockets/baileys'
 import config from '../../config.js'
-import { askAI, MODEL_SMART, MODEL_FAST } from '../../lib/ai.js'
+import { askAI, MODEL_SMART, MODEL_FAST, SYSTEM_INSTRUCTION_LITE } from '../../lib/ai.js'
 import { aiCooldownCache, aiSpontaneousCooldownCache } from '../../lib/caches.js'
 
 // Charla conversacional con IA (Groq). Formas de activarla:
@@ -85,7 +85,7 @@ function senderLabel(m) {
   return m.pushName?.trim() || 'esta persona (no tenés su nombre real, no inventes uno)'
 }
 
-async function responder(m, { rawText, apiPrompt, directo = false, model = MODEL_FAST, maxTokens = 300 }) {
+async function responder(m, { rawText, apiPrompt, directo = false, model = MODEL_FAST, maxTokens = 300, systemInstruction }) {
   const jid = m.sender
 
   // El cooldown por remitente (8s) solo aplica a interacción DIRECTA (evita
@@ -112,7 +112,7 @@ async function responder(m, { rawText, apiPrompt, directo = false, model = MODEL
   const history = directo ? getHistory(jid) : []
 
   try {
-    const respuesta = await askAI(apiPrompt || trimmed, history, model, maxTokens)
+    const respuesta = await askAI(apiPrompt || trimmed, history, model, maxTokens, systemInstruction)
     if (/^NOPE\b/i.test(respuesta.trim())) return // decidió no sumarse (solo puede pasar en modo ambiental)
 
     if (directo) pushHistory(jid, trimmed, respuesta)
@@ -141,7 +141,7 @@ const handler = async (m, { text }) => {
   // es donde realmente hace falta.
   const nombre = senderLabel(m)
   const apiPrompt = `${nombre} te escribe${m.isGroup ? '' : ' por privado'}: ${text}`
-  await responder(m, { rawText: text, apiPrompt, model: MODEL_SMART, directo: true })
+  await responder(m, { rawText: text, apiPrompt, model: MODEL_SMART, directo: true, systemInstruction: SYSTEM_INSTRUCTION_LITE })
 }
 
 // Mensajes tipo "Bot <algo>" — el estilo de invocación de OTROS bots del
@@ -193,7 +193,7 @@ handler.all = async function (m, { conn, groupDb }) {
     const apiPrompt = m.isGroup
       ? `${nombre} te habla directamente (te mencionó o te respondió): ${body}`
       : `${nombre} te escribe por privado: ${body}`
-    return responder(m, { rawText: body, apiPrompt, model: MODEL_SMART, directo: true })
+    return responder(m, { rawText: body, apiPrompt, model: MODEL_SMART, directo: true, systemInstruction: SYSTEM_INSTRUCTION_LITE })
   }
 
   // A partir de acá: mensaje de grupo normal, nadie le habló a Miku directamente.
@@ -214,18 +214,19 @@ handler.all = async function (m, { conn, groupDb }) {
     if (aiSpontaneousCooldownCache.has(m.chat)) return
     aiSpontaneousCooldownCache.set(m.chat, true, CONSTANT_MODE_COOLDOWN_SEC)
 
+    // A pedido de Carlos: modo constante prueba SIN la capa de reglas de
+    // comportamiento (personalidad, anti-comentario-personal, etc.) — solo
+    // identidad + capacidades reales (SYSTEM_INSTRUCTION_LITE) — para ver si
+    // el modelo responde más coherente con menos instrucción encima.
     const nombreActual = m.pushName || 'Alguien'
     const apiPrompt = `${buildContextBlock(m.chat, { excludeLast: true })}` +
       `${nombreActual} ACABA DE ESCRIBIR AHORA MISMO: "${texto}"\n\n` +
       `Estás participando activamente de esta conversación grupal como una integrante más del chat — ` +
       `nadie te habló a vos directamente, pero estás en "modo charla" y siempre sumás algo (una gracia, ` +
-      `una opinión corta, una reacción) a lo que ${nombreActual} acaba de decir AHORA — no a temas del ` +
-      `trasfondo de arriba, esos ya quedaron atrás. Comentá sobre el TEMA de lo que acaba de escribir, ` +
-      `nunca sobre una persona puntual: prohibido opinar, especular o hacer chistes sobre el estado de ` +
-      `ánimo, carácter o comportamiento de nadie (nada de "fulano se ofendió", "alguien tiene mal día", ` +
-      `etc.) — eso hace sentir atacada a la gente aunque no sea la intención. Respondé siempre, breve y natural.`
+      `una opinión corta, una reacción) a lo que ${nombreActual} acaba de decir AHORA, no a temas del ` +
+      `trasfondo de arriba (esos ya quedaron atrás). Respondé siempre, breve y natural.`
 
-    return responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 120 })
+    return responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 120, systemInstruction: SYSTEM_INSTRUCTION_LITE })
   }
 
   // Modo normal: participación ocasional, puede "elegir" no decir nada. Usa
