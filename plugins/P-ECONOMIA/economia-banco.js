@@ -45,13 +45,13 @@ async function retirar(m, { args, usedPrefix }) {
 }
 
 const handler = async (m, ctx) => {
-  if (['deposit', 'dep', 'depositar'].includes(ctx.command)) return depositar(m, ctx)
+  if (['deposit', 'dep', 'depositar', 'd'].includes(ctx.command)) return depositar(m, ctx)
   return retirar(m, ctx)
 }
 
 handler.help = ['deposit <cantidad|all>', 'withdraw <cantidad|all>']
-handler.desc = 'Guardá monedas en el banco (a salvo de robos) o retiralas de vuelta a tu billetera.'
+handler.desc = 'Guardá monedas en el banco (a salvo de robos) o retiralas de vuelta a tu billetera. Usá "all" para mover todo de una.'
 handler.tags = ['economia']
-handler.command = ['deposit', 'dep', 'depositar', 'withdraw', 'with', 'retirar']
+handler.command = ['deposit', 'dep', 'depositar', 'd', 'withdraw', 'with', 'retirar']
 
 export default handler
