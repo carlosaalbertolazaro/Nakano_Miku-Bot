@@ -19,7 +19,7 @@ import { aiCooldownCache, aiSpontaneousCooldownCache } from '../../lib/caches.js
 //        directo (mención/reply/comando/DM, ya cubierto arriba).
 //    En 'normal' y 'constante' se ignoran los mensajes sin texto real
 //    (solo emojis/signos) vía esTextoRelevante().
-const MAX_HISTORY_TURNS = 6 // 6 idas y vueltas (12 entradas: usuario+modelo)
+const MAX_HISTORY_TURNS = 3 // 3 idas y vueltas (6 entradas) — más corto que antes para que un intercambio raro no quede pegado por mucho tiempo
 const MAX_CONTEXT_MESSAGES = 6 // mensajes recientes del grupo que se le dan de contexto (achicado para no comerse el límite de tokens/minuto de Groq)
 const MAX_CONTEXT_LINE_LENGTH = 200 // trunca mensajes larguísimos antes de meterlos en el contexto
 const SPONTANEOUS_CHANCE = 0.10 // 10% de probabilidad por mensaje "elegible" en modo normal
@@ -90,11 +90,19 @@ async function responder(m, { rawText, apiPrompt, directo = false, model = MODEL
   const trimmed = (rawText || '').trim()
   if (!trimmed) return
 
+  // El historial de conversación (getHistory/pushHistory) SOLO se usa en
+  // interacción directa. Si también se usara en modo ambiental, una
+  // respuesta espontánea rara quedaba en el historial de esa persona y se
+  // le seguía "pegando" en cada mención/DM posterior, sin importar lo que
+  // preguntara — un caso real reportado por Carlos (la IA se enganchó de
+  // un chiste viejo y no soltaba el tema).
+  const history = directo ? getHistory(jid) : []
+
   try {
-    const respuesta = await askAI(apiPrompt || trimmed, getHistory(jid), model, maxTokens)
+    const respuesta = await askAI(apiPrompt || trimmed, history, model, maxTokens)
     if (/^NOPE\b/i.test(respuesta.trim())) return // decidió no sumarse (solo puede pasar en modo ambiental)
 
-    pushHistory(jid, trimmed, respuesta)
+    if (directo) pushHistory(jid, trimmed, respuesta)
     await m.reply(respuesta)
   } catch (e) {
     if (!directo) return // en modos ambientales no se ensucia el grupo con errores técnicos
@@ -103,6 +111,15 @@ async function responder(m, { rawText, apiPrompt, directo = false, model = MODEL
 }
 
 const handler = async (m, { text }) => {
+  // Escape hatch manual: si la conversación de alguien con Miku queda
+  // "pegada" en algo raro (pasó de verdad — ver el comentario en
+  // responder()), cualquiera puede resetear SU PROPIO historial sin
+  // necesitar que se reinicie el bot entero.
+  if (['olvidar', 'reset', 'forget'].includes((text || '').trim().toLowerCase())) {
+    conversations.delete(m.sender)
+    return m.reply(`*『 🧹 』Listo, me olvidé de nuestra charla anterior — arrancamos de cero.*`)
+  }
+
   // OJO: acá NO se agrega buildContextBlock() a propósito. Meter los
   // mensajes recientes de otras personas del grupo en una pregunta directa
   // ("quién soy") confundía al modelo y terminaba dirigiéndose a esas otras
@@ -201,8 +218,8 @@ handler.all = async function (m, { conn, groupDb }) {
   await responder(m, { rawText: body, apiPrompt, model: MODEL_SMART, maxTokens: 200 })
 }
 
-handler.help = ['ai <prompt>']
-handler.desc = 'Hablá con Miku (IA) — responde si le contestás un mensaje suyo, la mencionás, o le escribís por privado. Ver .iamodo para elegir si además participa sola en el grupo (normal/constante/silencio).'
+handler.help = ['ai <prompt>', 'ai olvidar']
+handler.desc = 'Hablá con Miku (IA) — responde si le contestás un mensaje suyo, la mencionás, o le escribís por privado. *.ai olvidar* resetea tu charla si se traba en algo raro. Ver .iamodo para elegir si además participa sola en el grupo (normal/constante/silencio).'
 handler.tags = ['ia']
 handler.command = ['ai', 'miku']
 
