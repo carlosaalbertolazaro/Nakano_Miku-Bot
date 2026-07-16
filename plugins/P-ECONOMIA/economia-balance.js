@@ -22,14 +22,16 @@ const handler = async (m, { text }) => {
   const premiumLine = user.premium?.tier && user.premium.tier !== 'free'
     ? `> 💎 Premium: *${user.premium.tier}*\n`
     : ''
+  const bank = user.data?.economy?.bank || 0
 
   const texto = `*『 💰 』PERFIL DE ${tag}*\n\n` +
     `> 🏅 Nivel: *${progress.level}*\n` +
     `> ✨ XP: *${progress.into}/${progress.span}*\n` +
     `> ${bar}\n` +
-    `> 🪙 Monedas: *${user.coins}*\n` +
+    `> 🪙 Billetera: *${user.coins}*\n` +
+    `> 🏦 Banco: *${bank}*\n` +
     premiumLine +
-    `\n> 💡 Usá *.rank* para tu tarjeta visual, *.daily* para tu recompensa diaria.`
+    `\n> 💡 *.rank* tarjeta visual · *.daily* recompensa diaria · *.work*/*.crime* ganar más · *.deposit* proteger tu plata.`
 
   await m.reply(texto, { mentions: [who] })
 }
