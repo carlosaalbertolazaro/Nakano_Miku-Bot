@@ -166,8 +166,26 @@ const handler = async (m, { conn, command }) => {
   }
 }
 
-handler.help = ['<accion> [@user] — ej: abrazar, besar, acariciar, cachetada, cuddle, patear, morder...']
-handler.desc = 'Reacciones/GIFs de anime para interactuar con alguien (o solo/a). 50+ acciones en español e inglés — abrazar, besar, acariciar, cachetada, cuddle, morder, patear, bailar, llorar, y muchas más.'
+// Se pidió explícitamente listar TODAS las acciones acá (no solo un par de
+// ejemplos) porque los miembros nuevos del grupo no se enteraban de que
+// existían — quedaban escondidas dentro de un solo comando genérico
+// "<accion> [@user]" en el menú.
+handler.help = ['<accion> [@user]']
+handler.desc =
+  'Reacciones/GIFs de anime para interactuar con alguien (o solo/a) — escribí cualquiera de estos como comando, ' +
+  'mencionando o respondiendo a alguien si aplica:\n' +
+  'hug/abrazar, kiss/besar, pat/acariciar, slap/cachetada, cuddle/acurrucar\n' +
+  'poke/picar, bite/morder, tickle/cosquillas, patear, punch/golpear\n' +
+  'cry/llorar, dance/bailar, blush/sonrojar, smile/sonreir, wave/saludar\n' +
+  'highfive/chocala, handhold/tomarmano, feed/alimentar, carry/cargar, bonk\n' +
+  'baka, yeet, wink/guinio, angry/enojado, happy/feliz\n' +
+  'laugh/reir, pout/puchero, run/correr, think/pensar, facepalm\n' +
+  'shocked/sorprendido, shrug, stare/mirar, confused/confundido, bored/aburrido\n' +
+  'yawn/bostezar, sleep/dormir, clap/aplaudir, handshake, blowkiss/besovolador\n' +
+  'salute, thumbsup, tableflip/voltearmesa, kabedon, nom/comer\n' +
+  'smug, spin/girar, nod/asentir, nope, lurk/acechar\n' +
+  'shoot/disparar, peck/piquito, sip/sorber, wag/menearcola, teehee\n' +
+  'nya, lappillow/almohada, shake/sacudir'
 handler.tags = ['roleplay']
 handler.command = Object.keys(ACTIONS)
 

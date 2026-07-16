@@ -61,6 +61,6 @@ const handler = async (m) => {
 handler.help = ['crime']
 handler.desc = 'Intentá ganar monedas rápido cometiendo un delito — arriesgado, podés perder plata si te atrapan.'
 handler.tags = ['economia']
-handler.command = ['crime', 'delito']
+handler.command = ['crime', 'delito', 'c']
 
 export default handler
