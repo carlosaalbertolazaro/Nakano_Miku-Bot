@@ -175,12 +175,17 @@ handler.all = async function (m, { conn, groupDb }) {
     const apiPrompt = `${buildContextBlock(m.chat)}` +
       `Estás participando activamente de esta conversación grupal como una integrante más del chat — ` +
       `nadie te habló a vos directamente, pero estás en "modo charla" y siempre sumás algo (una gracia, ` +
-      `una opinión corta, una reacción) a lo que se viene hablando. Respondé siempre, breve y natural.`
+      `una opinión corta, una reacción) a lo que se viene hablando. No te enganches con la misma persona ` +
+      `mensaje tras mensaje ni la conviertas en blanco fijo de chistes. Respondé siempre, breve y natural.`
 
     return responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 120 })
   }
 
-  // Modo normal: participación ocasional, puede "elegir" no decir nada.
+  // Modo normal: participación ocasional, puede "elegir" no decir nada. Usa
+  // MODEL_SMART (no MODEL_FAST): el volumen acá es bajo por diseño (10% de
+  // probabilidad + 2 min de cooldown por grupo), así que entra de sobra en
+  // la cuota de 1.000/día del modelo grande, y se nota mucho la diferencia
+  // de calidad en algo tan simple como un "hola" suelto en el grupo.
   if (texto.length < SPONTANEOUS_MIN_LENGTH) return
   if (aiSpontaneousCooldownCache.has(m.chat)) return
   if (Math.random() > SPONTANEOUS_CHANCE) return
@@ -190,9 +195,10 @@ handler.all = async function (m, { conn, groupDb }) {
   const apiPrompt = `${buildContextBlock(m.chat)}` +
     `Estás mirando esta conversación grupal como una integrante más del chat — nadie te habló a vos directamente. ` +
     `Si te parece natural sumar un comentario breve (una gracia, una opinión corta, algo que aporte a lo que se viene hablando), respondé eso. ` +
+    `No te enganches con la misma persona dos veces seguidas ni la uses de blanco de chiste sin que ella te haya hablado o faltado el respeto primero. ` +
     `Si no tenés nada que aportar o no pega meterte ahora, respondé EXACTAMENTE la palabra NOPE y nada más.`
 
-  await responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 120 })
+  await responder(m, { rawText: body, apiPrompt, model: MODEL_SMART, maxTokens: 200 })
 }
 
 handler.help = ['ai <prompt>']
