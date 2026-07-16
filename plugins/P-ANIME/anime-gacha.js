@@ -102,7 +102,7 @@ async function claimCharacter(m) {
   await user.save()
 
   await m.reply(
-    `*『 💘 』¡RECLAMADO!*\n> @${jidNormalizedUser(m.sender).split('@')[0]} agregó a *${character.name}* (${character.rarity.label}) a su colección.\n> Usá *.harem* para ver tu colección completa.`,
+    `*『 💘 』¡RECLAMADO!*\n> @${jidNormalizedUser(m.sender).split('@')[0]} agregó a *${character.name}* (${character.rarity.label}) a su colección.\n> Usá *.harem* para ver tu colección completa, *.sellwaifu <numero>* para venderlo al bot, o *.listwaifu <numero> <precio>* para publicarlo en *.haremshop* y que otro jugador te lo compre.`,
     { mentions: [m.sender] }
   )
 }
@@ -113,9 +113,9 @@ const handler = async (m, ctx) => {
 }
 
 handler.help = ['gacha', 'claim']
-handler.desc = 'Invoca un personaje de anime al azar (Jikan/MyAnimeList). El primero en escribir *.claim* se lo queda.'
+handler.desc = 'Invoca un personaje de anime al azar. El primero en escribir *.claim* se lo queda — después lo podés vender (.sellwaifu) o publicarlo en el mercado (.haremshop) para ganar monedas.'
 handler.tags = ['anime']
-handler.command = ['gacha', 'roll', 'waifu', 'claim', 'reclamar']
+handler.command = ['gacha', 'roll', 'rollwaifu', 'rw', 'waifu', 'claim', 'reclamar']
 handler.groupOnly = true
 
 export default handler
