@@ -1,5 +1,6 @@
 import { sendImageAsSticker, sendVideoAsSticker } from '../../lib/sticker.js'
 import config from '../../config.js'
+import UserDb from '../../lib/database/UserDb.js'
 
 const handler = async (m, { conn }) => {
   const q = m.quoted ? m.quoted : m
@@ -12,8 +13,11 @@ const handler = async (m, { conn }) => {
     return m.reply(`*『 ✙ 』SIN MEDIA.*\n> Enviá o respondé a una imagen o video.`)
   }
 
-  const packname = config.packname || 'Miku'
-  const author   = config.author || 'Carlos'
+  // .setstickermeta permite personalizar el pack/autor por usuario — si no
+  // configuró nada, se usan los valores por defecto del bot.
+  const user = await UserDb.findOrCreate(m.sender)
+  const packname = user.data?.stickers?.packname || config.packname || 'Miku'
+  const author   = user.data?.stickers?.author || config.author || 'Carlos'
 
   await m.reply(`*『 ⏳ 』Creando sticker...*`)
 
