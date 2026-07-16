@@ -162,7 +162,19 @@ handler.all = async function (m, { conn, groupDb }) {
   if (esComando) return // ya lo maneja el sistema de comandos, sea o no válido
 
   const esReplyAlBot = m.quoted?.fromMe === true
-  const loMencionaron = m.isGroup && m.mentionedJid?.some(jid => jidNormalizedUser(jid) === jidNormalizedUser(conn.user.id))
+  // OJO: comparar solo contra conn.user.id no alcanza — WhatsApp puede taggear
+  // al bot con su identificador @lid en vez del @s.whatsapp.net de siempre
+  // (mismo fenómeno ya documentado y parchado para detección de admin en
+  // handler.js/getAdminStatus). Si solo se chequeaba conn.user.id, una
+  // mención real quedaba sin detectar cada vez que WhatsApp mandaba el @lid,
+  // y el mensaje cascoteaba hacia la sección ambiental — donde 'silencio' lo
+  // frena en seco. En 'normal'/'constante' el mismo bug quedaba tapado
+  // porque el modo ambiental igual respondía (por probabilidad o siempre),
+  // dando la falsa impresión de que la mención "funcionaba".
+  const botIds = [conn.user?.id, conn.user?.lid].filter(Boolean)
+  const loMencionaron = m.isGroup && m.mentionedJid?.some(jid =>
+    botIds.some(botId => jidNormalizedUser(jid) === jidNormalizedUser(botId))
+  )
   const esDM = !m.isGroup
 
   if (esDM || esReplyAlBot || loMencionaron) {
