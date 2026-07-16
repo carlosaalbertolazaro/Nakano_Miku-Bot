@@ -22,7 +22,11 @@ import { aiCooldownCache, aiSpontaneousCooldownCache } from '../../lib/caches.js
 const MAX_HISTORY_TURNS = 3 // 3 idas y vueltas (6 entradas) — más corto que antes para que un intercambio raro no quede pegado por mucho tiempo
 const MAX_CONTEXT_MESSAGES = 6 // mensajes recientes del grupo que se le dan de contexto (achicado para no comerse el límite de tokens/minuto de Groq)
 const MAX_CONTEXT_LINE_LENGTH = 200 // trunca mensajes larguísimos antes de meterlos en el contexto
-const SPONTANEOUS_CHANCE = 0.10 // 10% de probabilidad por mensaje "elegible" en modo normal
+// Bajado de 10% a 5%: varios integrantes de un grupo pidieron directamente
+// "bajen la IA" porque se metía muy seguido en la charla sin que nadie la
+// llamara — sumado al freno de contenido de arriba, esto la hace bastante
+// menos presente en modo normal.
+const SPONTANEOUS_CHANCE = 0.05
 const SPONTANEOUS_MIN_LENGTH = 8 // ignora mensajes muy cortos (evita ruido tipo "jaja", "ok")
 // 10s en vez de 4: en un grupo muy activo, contestar cada 4s sin parar
 // satura la conexión de WhatsApp (los envíos empiezan a colgarse y el bot
@@ -192,8 +196,10 @@ handler.all = async function (m, { conn, groupDb }) {
     const apiPrompt = `${buildContextBlock(m.chat)}` +
       `Estás participando activamente de esta conversación grupal como una integrante más del chat — ` +
       `nadie te habló a vos directamente, pero estás en "modo charla" y siempre sumás algo (una gracia, ` +
-      `una opinión corta, una reacción) a lo que se viene hablando. No te enganches con la misma persona ` +
-      `mensaje tras mensaje ni la conviertas en blanco fijo de chistes. Respondé siempre, breve y natural.`
+      `una opinión corta, una reacción) a lo que se viene hablando. Comentá sobre el TEMA de la charla, ` +
+      `nunca sobre una persona puntual: prohibido opinar, especular o hacer chistes sobre el estado de ` +
+      `ánimo, carácter o comportamiento de nadie (nada de "fulano se ofendió", "alguien tiene mal día", ` +
+      `etc.) — eso hace sentir atacada a la gente aunque no sea la intención. Respondé siempre, breve y natural.`
 
     return responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 120 })
   }
@@ -211,8 +217,10 @@ handler.all = async function (m, { conn, groupDb }) {
 
   const apiPrompt = `${buildContextBlock(m.chat)}` +
     `Estás mirando esta conversación grupal como una integrante más del chat — nadie te habló a vos directamente. ` +
-    `Si te parece natural sumar un comentario breve (una gracia, una opinión corta, algo que aporte a lo que se viene hablando), respondé eso. ` +
-    `No te enganches con la misma persona dos veces seguidas ni la uses de blanco de chiste sin que ella te haya hablado o faltado el respeto primero. ` +
+    `Si te parece natural sumar un comentario breve sobre el TEMA de la charla (una gracia, una opinión corta, algo que aporte), respondé eso. ` +
+    `Prohibido opinar, especular o hacer chistes sobre el estado de ánimo, carácter o comportamiento de una ` +
+    `persona puntual (nada de "fulano se ofendió", "alguien tiene mal día", etc.) — comentá el tema, nunca a ` +
+    `la gente, salvo que alguien te haya hablado a vos directamente o te haya faltado el respeto. ` +
     `Si no tenés nada que aportar o no pega meterte ahora, respondé EXACTAMENTE la palabra NOPE y nada más.`
 
   await responder(m, { rawText: body, apiPrompt, model: MODEL_SMART, maxTokens: 200 })
