@@ -63,11 +63,20 @@ function recordGroupMessage(chat, name, text) {
   while (arr.length > MAX_CONTEXT_MESSAGES) arr.shift()
 }
 
-function buildContextBlock(chat) {
-  const arr = groupHistory.get(chat) || []
+// IMPORTANTE: excludeLast=true saca el mensaje que disparó esta respuesta del
+// bloque de "trasfondo" — antes venía mezclado ahí adentro, sin distinguirse
+// de mensajes de 2-3 turnos atrás, y el modelo terminaba reaccionando a un
+// tema viejo en vez del mensaje actual (efecto "bola de nieve" reportado por
+// Carlos: se desfasaba, mezclaba nombres de otra gente que habló antes, y
+// hasta arrastró una vez contenido raro de un tema anterior). Ahora el
+// mensaje actual se pasa aparte, con nombre y texto explícitos, para que no
+// haya ambigüedad de a qué tiene que responder.
+function buildContextBlock(chat, { excludeLast = false } = {}) {
+  let arr = groupHistory.get(chat) || []
+  if (excludeLast) arr = arr.slice(0, -1)
   if (!arr.length) return ''
   const lineas = arr.map(e => `${e.name}: ${e.text}`).join('\n')
-  return `[Contexto reciente del grupo — no son mensajes tuyos, es solo para que sepas de qué se viene hablando]\n${lineas}\n\n`
+  return `[Trasfondo de la charla — mensajes ANTERIORES, ya quedaron atrás, NO son lo que tenés que responder, solo te dan una idea de qué se venía hablando]\n${lineas}\n\n`
 }
 
 // Nombre real de WhatsApp de quien escribe — se lo damos siempre a la IA
@@ -205,10 +214,13 @@ handler.all = async function (m, { conn, groupDb }) {
     if (aiSpontaneousCooldownCache.has(m.chat)) return
     aiSpontaneousCooldownCache.set(m.chat, true, CONSTANT_MODE_COOLDOWN_SEC)
 
-    const apiPrompt = `${buildContextBlock(m.chat)}` +
+    const nombreActual = m.pushName || 'Alguien'
+    const apiPrompt = `${buildContextBlock(m.chat, { excludeLast: true })}` +
+      `${nombreActual} ACABA DE ESCRIBIR AHORA MISMO: "${texto}"\n\n` +
       `Estás participando activamente de esta conversación grupal como una integrante más del chat — ` +
       `nadie te habló a vos directamente, pero estás en "modo charla" y siempre sumás algo (una gracia, ` +
-      `una opinión corta, una reacción) a lo que se viene hablando. Comentá sobre el TEMA de la charla, ` +
+      `una opinión corta, una reacción) a lo que ${nombreActual} acaba de decir AHORA — no a temas del ` +
+      `trasfondo de arriba, esos ya quedaron atrás. Comentá sobre el TEMA de lo que acaba de escribir, ` +
       `nunca sobre una persona puntual: prohibido opinar, especular o hacer chistes sobre el estado de ` +
       `ánimo, carácter o comportamiento de nadie (nada de "fulano se ofendió", "alguien tiene mal día", ` +
       `etc.) — eso hace sentir atacada a la gente aunque no sea la intención. Respondé siempre, breve y natural.`
@@ -227,11 +239,14 @@ handler.all = async function (m, { conn, groupDb }) {
 
   aiSpontaneousCooldownCache.set(m.chat, true) // se consume el intento, hable o no, para no evaluar de nuevo enseguida
 
-  const apiPrompt = `${buildContextBlock(m.chat)}` +
+  const nombreActual = m.pushName || 'Alguien'
+  const apiPrompt = `${buildContextBlock(m.chat, { excludeLast: true })}` +
+    `${nombreActual} ACABA DE ESCRIBIR AHORA MISMO: "${texto}"\n\n` +
     `Estás mirando esta conversación grupal como una integrante más del chat — nadie te habló a vos directamente. ` +
-    `Si te parece natural sumar un comentario breve sobre el TEMA de la charla (una gracia, una opinión corta, algo que aporte), respondé eso. ` +
-    `Prohibido opinar, especular o hacer chistes sobre el estado de ánimo, carácter o comportamiento de una ` +
-    `persona puntual (nada de "fulano se ofendió", "alguien tiene mal día", etc.) — comentá el tema, nunca a ` +
+    `Si te parece natural sumar un comentario breve sobre lo que ${nombreActual} acaba de decir AHORA (una gracia, ` +
+    `una opinión corta, algo que aporte), respondé eso — no reacciones a temas del trasfondo de arriba, esos ya ` +
+    `quedaron atrás. Prohibido opinar, especular o hacer chistes sobre el estado de ánimo, carácter o comportamiento ` +
+    `de una persona puntual (nada de "fulano se ofendió", "alguien tiene mal día", etc.) — comentá el tema, nunca a ` +
     `la gente, salvo que alguien te haya hablado a vos directamente o te haya faltado el respeto. ` +
     `Si no tenés nada que aportar o no pega meterte ahora, respondé EXACTAMENTE la palabra NOPE y nada más.`
 
