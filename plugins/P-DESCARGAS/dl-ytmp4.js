@@ -4,6 +4,7 @@ import path from 'path'
 import { rm } from 'fs/promises'
 import { pipeline } from 'stream/promises'
 import config from '../../config.js'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 const handler = async (m, { conn, text, usedPrefix, command }) => {
   if (!text) return m.reply(`*『 ✙ 』USO.*\n> Ingresa un enlace o nombre de video.\n\n> *Ejemplo:* ${usedPrefix}${command} https://youtu.be/xxx`)
@@ -112,12 +113,14 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     }]
   }]
 
+  const thumbBuffer = await fetchImageBuffer(videoInfo.thumbnail)
+
   await conn.sendMessage(m.chat, {
-    image: { url: videoInfo.thumbnail },
+    ...(thumbBuffer ? { image: thumbBuffer } : {}),
     caption: infoText,
     footer: global.botname || config.botName,
     buttons: nativeFlowButtons,
-    headerType: 4,
+    headerType: thumbBuffer ? 4 : 1,
     mentions: isLid ? [] : [sender]
   }, { quoted: m })
 }

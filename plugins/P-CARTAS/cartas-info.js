@@ -1,5 +1,6 @@
 import UserDb from '../../lib/database/UserDb.js'
 import { CARD_RARITY_TIERS } from '../../lib/ygo.js'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 const handler = async (m, { conn, args, usedPrefix, command }) => {
   const idx = parseInt(args[0])
@@ -25,8 +26,9 @@ const handler = async (m, { conn, args, usedPrefix, command }) => {
     `> 📅 Obtenida: ${fecha}\n`
 
   try {
-    if (card.image) {
-      await conn.sendMessage(m.chat, { image: { url: card.image }, caption }, { quoted: m })
+    const buffer = card.image ? await fetchImageBuffer(card.image) : null
+    if (buffer) {
+      await conn.sendMessage(m.chat, { image: buffer, caption }, { quoted: m })
     } else {
       await m.reply(caption)
     }

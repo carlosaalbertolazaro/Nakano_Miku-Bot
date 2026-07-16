@@ -2,6 +2,7 @@ import { jidNormalizedUser } from '@whiskeysockets/baileys'
 import { fetchRandomCharacter } from '../../lib/jikan.js'
 import { gachaCooldownCache } from '../../lib/caches.js'
 import UserDb from '../../lib/database/UserDb.js'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 // Mecánica estilo Mudae: .gacha invoca un personaje al azar en el grupo, y el
 // primero en escribir .claim se lo queda. Estado en memoria por chat (mismo
@@ -60,8 +61,9 @@ async function rollCharacter(m, { conn, groupDb }) {
     `\n> Escribí *.claim* para quedártelo — tenés *${Math.floor(CLAIM_WINDOW_MS / 1000)}s* antes de que se escape.`
 
   try {
-    if (character.image) {
-      await conn.sendMessage(m.chat, { image: { url: character.image }, caption })
+    const buffer = character.image ? await fetchImageBuffer(character.image) : null
+    if (buffer) {
+      await conn.sendMessage(m.chat, { image: buffer, caption })
     } else {
       await m.reply(caption)
     }

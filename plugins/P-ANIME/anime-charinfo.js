@@ -1,5 +1,6 @@
 import UserDb from '../../lib/database/UserDb.js'
 import { RARITY_TIERS } from '../../lib/jikan.js'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 const handler = async (m, { conn, args, usedPrefix, command }) => {
   const idx = parseInt(args[0])
@@ -26,8 +27,9 @@ const handler = async (m, { conn, args, usedPrefix, command }) => {
     (character.malId ? `> 🔗 https://myanimelist.net/character/${character.malId}\n` : '')
 
   try {
-    if (character.image) {
-      await conn.sendMessage(m.chat, { image: { url: character.image }, caption }, { quoted: m })
+    const buffer = character.image ? await fetchImageBuffer(character.image) : null
+    if (buffer) {
+      await conn.sendMessage(m.chat, { image: buffer, caption }, { quoted: m })
     } else {
       await m.reply(caption)
     }

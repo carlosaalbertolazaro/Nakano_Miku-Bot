@@ -1,5 +1,6 @@
 import { fetchRandomPokemon, generateSilhouette } from '../../lib/pokeapi.js'
 import UserDb from '../../lib/database/UserDb.js'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 // Spawns automáticos estilo Pokétwo: cada grupo tiene su propio contador de
 // mensajes y un umbral aleatorio; al alcanzarlo aparece un Pokémon salvaje en
@@ -64,7 +65,9 @@ async function trySpawn(chat, conn) {
     if (silhouette) {
       await conn.sendMessage(chat, { image: silhouette, caption })
     } else {
-      await conn.sendMessage(chat, { image: { url: pokemon.image }, caption })
+      const buffer = await fetchImageBuffer(pokemon.image)
+      if (buffer) await conn.sendMessage(chat, { image: buffer, caption })
+      else await conn.sendMessage(chat, { text: caption })
     }
   } catch {}
 }

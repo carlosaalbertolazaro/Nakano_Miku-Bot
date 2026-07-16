@@ -1,5 +1,6 @@
 import { fetchRandomCard } from '../../lib/ygo.js'
 import UserDb from '../../lib/database/UserDb.js'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 const PACK_COST = 50
 
@@ -50,8 +51,9 @@ const handler = async (m, { conn, groupDb }) => {
     `> Usá *.deck* para ver tu colección.`
 
   try {
-    if (card.image) {
-      await conn.sendMessage(m.chat, { image: { url: card.image }, caption }, { quoted: m })
+    const buffer = card.image ? await fetchImageBuffer(card.image) : null
+    if (buffer) {
+      await conn.sendMessage(m.chat, { image: buffer, caption }, { quoted: m })
     } else {
       await m.reply(caption)
     }

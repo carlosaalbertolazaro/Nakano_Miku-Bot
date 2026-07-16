@@ -1,7 +1,20 @@
 import config from '../../config.js'
 import { plugins } from '../../handler.js'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 const START_TIME = Date.now()
+
+// Estas 6 URLs de ibb.co nunca cambian — se cachea el buffer una sola vez
+// (por URL) en vez de pedirle a Baileys que la baje de nuevo en cada .menu.
+const imageBufferCache = new Map()
+async function getRandomMenuImage() {
+  if (!IMAGENES.length) return null
+  const url = IMAGENES[Math.floor(Math.random() * IMAGENES.length)]
+  if (imageBufferCache.has(url)) return imageBufferCache.get(url)
+  const buffer = await fetchImageBuffer(url)
+  if (buffer) imageBufferCache.set(url, buffer)
+  return buffer
+}
 
 // Imágenes de Nakano Miku provistas por Carlos (ibb.co), verificadas (200 OK,
 // image/jpeg) antes de agregarlas.
@@ -125,10 +138,10 @@ async function enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb) {
   caption += `*┗━━━━•❅•°•❈•°•❅•━━━━┛*\n\n`
   caption += `> 🔙 Escribí *${prefix}menu* para volver al menú principal.`
 
-  const imageUrl = IMAGENES.length ? IMAGENES[Math.floor(Math.random() * IMAGENES.length)] : null
+  const imageBuffer = await getRandomMenuImage()
 
-  if (imageUrl) {
-    await conn.sendMessage(m.chat, { image: { url: imageUrl }, caption }, { quoted: m })
+  if (imageBuffer) {
+    await conn.sendMessage(m.chat, { image: imageBuffer, caption }, { quoted: m })
   } else {
     await m.reply(caption)
   }
@@ -178,10 +191,10 @@ const handler = async (m, { conn, usedPrefix, isOwner, command, args, groupDb })
 ${listaCategorias}
 *┗━━━━•❅•°•❈•°•❅•━━━━┛*`
 
-  const imageUrl = IMAGENES.length ? IMAGENES[Math.floor(Math.random() * IMAGENES.length)] : null
+  const imageBuffer = await getRandomMenuImage()
 
-  if (imageUrl) {
-    await conn.sendMessage(m.chat, { image: { url: imageUrl }, caption: textoMenu }, { quoted: m })
+  if (imageBuffer) {
+    await conn.sendMessage(m.chat, { image: imageBuffer, caption: textoMenu }, { quoted: m })
   } else {
     await m.reply(textoMenu)
   }

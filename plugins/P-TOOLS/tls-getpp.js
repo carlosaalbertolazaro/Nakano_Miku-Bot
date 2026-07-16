@@ -1,4 +1,5 @@
 import { jidNormalizedUser } from '@whiskeysockets/baileys'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 const handler = async (m, { conn, text, usedPrefix, command }) => {
     let who
@@ -15,8 +16,10 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 
     try {
         const pp = await conn.profilePictureUrl(user, 'image')
-        await conn.sendMessage(m.chat, { 
-            image: { url: pp }, 
+        const buffer = await fetchImageBuffer(pp)
+        if (!buffer) throw new Error('No se pudo descargar la foto a tiempo.')
+        await conn.sendMessage(m.chat, {
+            image: buffer,
             caption: `*『 ✨ 』FOTO EN ALTA RESOLUCIÓN*\n> Aquí tenés la foto de ${name}`,
             mentions: [user]
         }, { quoted: m })
@@ -24,8 +27,10 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     } catch (e) {
         try {
             const ppPreview = await conn.profilePictureUrl(user, 'preview')
-            await conn.sendMessage(m.chat, { 
-                image: { url: ppPreview }, 
+            const bufferPreview = await fetchImageBuffer(ppPreview)
+            if (!bufferPreview) throw new Error('No se pudo descargar la miniatura a tiempo.')
+            await conn.sendMessage(m.chat, {
+                image: bufferPreview,
                 caption: `*『 ⚠️ 』FOTO MINIATURA*\n> No pude obtener la imagen original por privacidad, pero aquí tenés la de miniatura para ${name}`,
                 mentions: [user]
             }, { quoted: m })

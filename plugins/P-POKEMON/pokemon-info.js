@@ -1,5 +1,6 @@
 import UserDb from '../../lib/database/UserDb.js'
 import { POKEMON_RARITY } from '../../lib/pokeapi.js'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 const handler = async (m, { conn, args, usedPrefix, command }) => {
   const idx = parseInt(args[0])
@@ -26,8 +27,9 @@ const handler = async (m, { conn, args, usedPrefix, command }) => {
     `> 📅 Atrapado: ${fecha}\n`
 
   try {
-    if (pokemon.image) {
-      await conn.sendMessage(m.chat, { image: { url: pokemon.image }, caption }, { quoted: m })
+    const buffer = pokemon.image ? await fetchImageBuffer(pokemon.image) : null
+    if (buffer) {
+      await conn.sendMessage(m.chat, { image: buffer, caption }, { quoted: m })
     } else {
       await m.reply(caption)
     }

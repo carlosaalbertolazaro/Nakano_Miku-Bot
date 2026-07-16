@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 
 // Mismo proveedor que el resto de P-DESCARGAS (luxinfinity.vercel.app).
 // Verificado en vivo antes de escribir esto: funciona bien para Pinterest
@@ -21,7 +22,9 @@ const handler = async (m, { conn, text, usedPrefix }) => {
     const imageUrl = pin.images?.orig || pin.image
     const caption = `*『 📌 』PINTEREST*\n> 📝 ${pin.title || 'Sin título'}${pin.pinner?.username ? `\n> 👤 @${pin.pinner.username}` : ''}`
 
-    await conn.sendMessage(m.chat, { image: { url: imageUrl }, caption }, { quoted: m })
+    const buffer = await fetchImageBuffer(imageUrl)
+    if (!buffer) return m.reply(`*『 ❌ 』ERROR.*\n> No se pudo descargar la imagen a tiempo. Intentá de nuevo.`)
+    await conn.sendMessage(m.chat, { image: buffer, caption }, { quoted: m })
   } catch (e) {
     m.reply(`*『 ❌ 』ERROR.*\n> No se pudo descargar la imagen. Intentá de nuevo.`)
   }
