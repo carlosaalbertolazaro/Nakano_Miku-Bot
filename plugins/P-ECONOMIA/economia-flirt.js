@@ -4,7 +4,7 @@ import UserDb from '../../lib/database/UserDb.js'
 // equivalente "picante mismo estilo" al típico comando tipo "slut" de otros
 // bots de economía — sin la temática sexual/denigrante, con coqueteo y
 // carisma en su lugar. Decisión tomada con Carlos.
-const COOLDOWN_MS = 20 * 60 * 1000 // el más corto de los tres, pero el más parejo en riesgo
+const COOLDOWN_MS = 45 * 1000 // 45s, igual que .crime (mismo tier de riesgo) — alineado con Nekos Club
 const SUCCESS_RATE = 0.6
 const MIN_WIN = 80
 const MAX_WIN = 300
@@ -37,8 +37,8 @@ const handler = async (m) => {
 
   if (elapsed < COOLDOWN_MS) {
     const remaining = COOLDOWN_MS - elapsed
-    const min = Math.ceil(remaining / 60000)
-    return m.reply(`*『 😳 』MUY PRONTO*\n> Dejá pasar un rato antes de volver a intentarlo — *${min} minutos*.`)
+    const seg = Math.ceil(remaining / 1000)
+    return m.reply(`*『 😳 』MUY PRONTO*\n> Dejá pasar un rato antes de volver a intentarlo — *${seg}s*.`)
   }
 
   user.data.economy.lastFlirt = now

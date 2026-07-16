@@ -1,6 +1,6 @@
 import UserDb from '../../lib/database/UserDb.js'
 
-const COOLDOWN_MS = 60 * 60 * 1000 // 1h
+const COOLDOWN_MS = 15 * 1000 // 15s — alineado con Nekos Club a pedido de Carlos (antes 1h)
 const MIN_REWARD = 50
 const MAX_REWARD = 250
 
@@ -35,8 +35,8 @@ const handler = async (m) => {
 
   if (elapsed < COOLDOWN_MS) {
     const remaining = COOLDOWN_MS - elapsed
-    const min = Math.ceil(remaining / 60000)
-    return m.reply(`*『 ⏳ 』ESTÁS CANSADO*\n> Descansá un poco más — volvé a trabajar en *${min} minutos*.`)
+    const seg = Math.ceil(remaining / 1000)
+    return m.reply(`*『 ⏳ 』ESTÁS CANSADO*\n> Descansá un poco más — volvé a trabajar en *${seg}s*.`)
   }
 
   const reward = Math.floor(Math.random() * (MAX_REWARD - MIN_REWARD + 1)) + MIN_REWARD
@@ -50,7 +50,7 @@ const handler = async (m) => {
 }
 
 handler.help = ['work']
-handler.desc = 'Trabajá para ganar monedas de forma segura (sin riesgo), una vez por hora.'
+handler.desc = 'Trabajá para ganar monedas de forma segura (sin riesgo), cada 15 segundos.'
 handler.tags = ['economia']
 handler.command = ['work', 'trabajar', 'w']
 

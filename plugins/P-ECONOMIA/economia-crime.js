@@ -1,6 +1,6 @@
 import UserDb from '../../lib/database/UserDb.js'
 
-const COOLDOWN_MS = 30 * 60 * 1000 // 30 min, más corto que .work pero con riesgo
+const COOLDOWN_MS = 45 * 1000 // 45s — alineado con Nekos Club a pedido de Carlos (antes 30 min)
 const SUCCESS_RATE = 0.55
 const MIN_WIN = 100
 const MAX_WIN = 500
@@ -37,8 +37,8 @@ const handler = async (m) => {
 
   if (elapsed < COOLDOWN_MS) {
     const remaining = COOLDOWN_MS - elapsed
-    const min = Math.ceil(remaining / 60000)
-    return m.reply(`*『 🚨 』MUY ARRIESGADO*\n> Esperá que se enfríe la cosa — volvé a intentarlo en *${min} minutos*.`)
+    const seg = Math.ceil(remaining / 1000)
+    return m.reply(`*『 🚨 』MUY ARRIESGADO*\n> Esperá que se enfríe la cosa — volvé a intentarlo en *${seg}s*.`)
   }
 
   user.data.economy.lastCrime = now
