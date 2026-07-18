@@ -112,7 +112,10 @@ async function responder(m, { rawText, apiPrompt, directo = false, model = MODEL
   const history = directo ? getHistory(jid) : []
 
   try {
-    const respuesta = await askAI(apiPrompt || trimmed, history, model, maxTokens, systemInstruction)
+    // allowFallback: directo — el respaldo de NVIDIA (ver lib/ai.js) solo
+    // tiene sentido cuando alguien está esperando una respuesta puntual
+    // (mención/reply/DM/.ai), nunca en modo ambiental.
+    const respuesta = await askAI(apiPrompt || trimmed, history, model, maxTokens, systemInstruction, directo)
     if (/^NOPE\b/i.test(respuesta.trim())) return // decidió no sumarse (solo puede pasar en modo ambiental)
 
     if (directo) pushHistory(jid, trimmed, respuesta)

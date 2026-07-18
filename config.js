@@ -22,6 +22,11 @@ const config = {
   author: 'Carlos',
   ai: {
     groqApiKey: process.env.GROQ_API_KEY || null,
+    // Respaldo (fallback) para cuando Groq falla en interacción directa —
+    // ver lib/ai.js. NVIDIA NIM (integrate.api.nvidia.com), free tier de
+    // 40 req/min sin tope diario, verificado en vivo con curl antes de
+    // integrarlo (a diferencia de Gemini, cuya cuota nunca llegó a andar).
+    nvidiaApiKey: process.env.NVIDIA_API_KEY || null,
   },
   aternos: {
     host: process.env.ATERNOS_SERVER_HOST || null,
