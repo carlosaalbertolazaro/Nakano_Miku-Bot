@@ -11,6 +11,7 @@ import { msgRetryCache } from './lib/caches.js'
 import { startEventScheduler } from './lib/eventScheduler.js'
 import { startAiringScheduler } from './lib/animeAiringScheduler.js'
 import { startAternosScheduler } from './lib/aternosScheduler.js'
+import { setWatchdogHandler } from './lib/queue.js'
 
 const pkg = baileysMod.default && Object.keys(baileysMod).length === 1 ? baileysMod.default : baileysMod
 const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, Browsers } = pkg
@@ -65,6 +66,10 @@ async function startBot() {
       const msg = msgRetryCache.get(key.id)
       return msg || undefined
     }
+  })
+setWatchdogHandler(() => {
+    console.log(chalk.bold.yellow('[WATCHDOG] Forzando cierre del socket para reconectar...'))
+    conn.end(new Error('watchdog: reconexión forzada por timeouts repetidos'))
   })
 
   if (config.usePairingCode && !conn.authState.creds.registered) {
