@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import http from 'http'
 import * as baileysMod from '@whiskeysockets/baileys'
 import pino from 'pino'
 import fs from 'fs'
@@ -12,6 +13,8 @@ import { startEventScheduler } from './lib/eventScheduler.js'
 import { startAiringScheduler } from './lib/animeAiringScheduler.js'
 import { startAternosScheduler } from './lib/aternosScheduler.js'
 import { setWatchdogHandler } from './lib/queue.js'
+import { getMongoDb } from './lib/database/mongo.js'
+import { useMongoAuthState } from './lib/mongoAuthState.js'
 
 const pkg = baileysMod.default && Object.keys(baileysMod).length === 1 ? baileysMod.default : baileysMod
 const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, Browsers } = pkg
@@ -19,7 +22,6 @@ const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBailey
 const SESSION_PATH = './sessions/main'
 const TMP_PATH = './tmp'
 
-if (!fs.existsSync(SESSION_PATH)) fs.mkdirSync(SESSION_PATH, { recursive: true })
 if (!fs.existsSync(TMP_PATH)) fs.mkdirSync(TMP_PATH, { recursive: true })
 
 setInterval(async () => {
@@ -37,12 +39,56 @@ setInterval(async () => {
 }, 3_600_000)
 
 let retryCount = 0
+let currentStatus = 'Iniciando...'
+let activeConn = null
+
 function calcDelay() {
   return Math.min(5000 * 2 ** retryCount + Math.random() * 2000, 120_000)
 }
 
+// Servidor de salud HTTP para Render y monitores externos
+const PORT = process.env.PORT
+if (PORT) {
+  const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(
+      JSON.stringify(
+        {
+          status: 'ok',
+          bot: config.botName,
+          connected: Boolean(activeConn?.user),
+          state: currentStatus,
+        },
+        null,
+        2
+      )
+    )
+  })
+  server.listen(PORT, () => {
+    console.log(chalk.bold.cyan(`[HTTP] Servidor de salud escuchando en puerto ${PORT}`))
+  })
+}
+
 async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState(SESSION_PATH)
+  let auth
+  let mongoDb = null
+
+  try {
+    mongoDb = await getMongoDb()
+  } catch (e) {
+    console.warn(chalk.bold.yellow('[AUTH] No se pudo conectar a MongoDB. Continuando en local...'))
+  }
+
+  if (mongoDb) {
+    console.log(chalk.bold.green('[AUTH] Usando autenticación persistente en MongoDB.'))
+    auth = await useMongoAuthState(mongoDb.collection('whatsapp_sessions'))
+  } else {
+    if (!fs.existsSync(SESSION_PATH)) fs.mkdirSync(SESSION_PATH, { recursive: true })
+    console.log(chalk.bold.blue('[AUTH] Usando autenticación local en disco (sessions/main).'))
+    auth = await useMultiFileAuthState(SESSION_PATH)
+  }
+
+  const { state, saveCreds } = auth
   const { version } = await fetchLatestBaileysVersion()
   const logger = pino({ level: 'silent' })
 
@@ -65,23 +111,36 @@ async function startBot() {
     getMessage: async (key) => {
       const msg = msgRetryCache.get(key.id)
       return msg || undefined
-    }
+    },
   })
-setWatchdogHandler(() => {
+
+  activeConn = conn
+
+  setWatchdogHandler(() => {
     console.log(chalk.bold.yellow('[WATCHDOG] Forzando cierre del socket para reconectar...'))
     conn.end(new Error('watchdog: reconexión forzada por timeouts repetidos'))
   })
 
   if (config.usePairingCode && !conn.authState.creds.registered) {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    const numero = await new Promise(res =>
-      rl.question(chalk.bold.yellowBright('\nINGRESA TU NÚMERO DE TELÉFONO (sin +): '), ans => { rl.close(); res(ans.replace(/\D/g, '')) })
-    )
+    let numero = process.env.PAIRING_NUMBER?.replace(/\D/g, '')
+
+    if (!numero) {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+      numero = await new Promise((res) =>
+        rl.question(chalk.bold.yellowBright('\nINGRESA TU NÚMERO DE TELÉFONO (sin +): '), (ans) => {
+          rl.close()
+          res(ans.replace(/\D/g, ''))
+        })
+      )
+    } else {
+      console.log(chalk.bold.yellowBright(`\n[VINCULACIÓN] Usando número configurado en entorno: +${numero}`))
+    }
+
     setTimeout(async () => {
       try {
         const raw = await conn.requestPairingCode(numero)
         const code = raw?.match(/.{1,4}/g)?.join('-') ?? raw
-        console.log(`\n${chalk.bold.yellowBright('CÓDIGO:')} ${chalk.bold.bgGreen.white(` ${code} `)}\n`)
+        console.log(`\n${chalk.bold.yellowBright('CÓDIGO DE VINCULACIÓN:')} ${chalk.bold.bgGreen.white(` ${code} `)}\n`)
       } catch (e) {
         console.error(chalk.bold.red('Error al solicitar código:'), e.message)
       }
@@ -94,6 +153,7 @@ setWatchdogHandler(() => {
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode
       const shouldReconnect = code !== DisconnectReason.loggedOut
+      currentStatus = shouldReconnect ? 'Reconectando...' : 'Desconectado'
 
       console.log(chalk.bold.red(`\n[CONEXIÓN] Cerrada. Código: ${code}. Reconectar: ${shouldReconnect}`))
 
@@ -103,11 +163,20 @@ setWatchdogHandler(() => {
         console.log(chalk.bold.yellow(`[CONEXIÓN] Reintentando en ${Math.round(delay / 1000)}s...`))
         setTimeout(startBot, delay)
       } else {
-        console.log(chalk.bold.red('[CONEXIÓN] Sesión cerrada. Borrá la carpeta sessions/ y volvé a vincular.'))
+        console.log(chalk.bold.red('[CONEXIÓN] Sesión cerrada (logged out).'))
+        if (mongoDb) {
+          try {
+            await mongoDb.collection('whatsapp_sessions').deleteMany({})
+            console.log(chalk.bold.yellow('[AUTH] Sesión de MongoDB eliminada para permitir nueva vinculación.'))
+          } catch {}
+        } else {
+          console.log(chalk.bold.red('[CONEXIÓN] Borrá la carpeta sessions/ y volvé a vincular.'))
+        }
         process.exit(1)
       }
     } else if (connection === 'open') {
       retryCount = 0
+      currentStatus = 'Conectado a WhatsApp'
       const botNum = conn.user?.id?.split('@')[0]?.split(':')[0]
       console.log(chalk.bold.greenBright(`\n╔══════════════════════════════╗`))
       console.log(chalk.bold.greenBright(`║  ✅  BOT CONECTADO           ║`))
@@ -142,15 +211,8 @@ setWatchdogHandler(() => {
 
   conn.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return
-    // Antes se hacía `await handler(...)` en el loop, uno por uno — si UN
-    // mensaje se colgaba en algo (una descarga externa lenta, un socket
-    // raro), el resto de los mensajes (de cualquier chat, de cualquier
-    // persona) quedaba esperando detrás sin procesarse, y el bot parecía
-    // mudo del todo hasta que esa promesa colgada se resolviera. Ahora cada
-    // mensaje se procesa independiente (sin await acá), así uno colgado no
-    // frena a los demás.
     for (const msg of messages) {
-      handler(conn, msg).catch(e => {
+      handler(conn, msg).catch((e) => {
         console.error(chalk.bold.bgRed.white(' [HANDLER ERROR] '), chalk.bold.redBright(e.stack || e.message))
       })
     }
