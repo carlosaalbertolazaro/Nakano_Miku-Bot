@@ -4,6 +4,7 @@
 
 <div align="center">
   <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&size=14&pause=2000&color=ffffff&center=true&vCenter=true&width=600&lines=Asistente+de+WhatsApp+para+comunidades+%E2%80%A2+Baileys+Multi-Device" alt="subtitle"/>
+  <h3>Bot de WhatsApp inspirado en Nakano Miku. Ofrece utilidades de gestión para grupos, comandos de entretenimiento interactivo y juegos para tu comunidad con una ia integrada que responde de forma autonoma.</h3>
 </div>
 
 <br/>
