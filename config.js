@@ -8,7 +8,7 @@ const config = {
   // dos — se dejó solo el punto. Cambialo vos mismo si querés (ej. volver a
   // /^[.#/!]/ para aceptar varios, o /^!/ para usar solo "!").
   prefix: /^\./,
-  ownerNumber: ['2285117201'],  // ← Cambia por tu número
+  ownerNumber: ['522285117201', '2285117201'],  // ← Cambia por tu número
   MODE: 'public',
   usePairingCode: true,
   antiSpam: {
@@ -22,10 +22,7 @@ const config = {
   author: 'Carlos',
   ai: {
     groqApiKey: process.env.GROQ_API_KEY || null,
-    // Respaldo (fallback) para cuando Groq falla en interacción directa —
-    // ver lib/ai.js. NVIDIA NIM (integrate.api.nvidia.com), free tier de
-    // 40 req/min sin tope diario, verificado en vivo con curl antes de
-    // integrarlo (a diferencia de Gemini, cuya cuota nunca llegó a andar).
+    geminiApiKey: process.env.GEMINI_API_KEY || null,
     nvidiaApiKey: process.env.NVIDIA_API_KEY || null,
   },
   aternos: {

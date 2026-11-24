@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import http from 'http'
 import * as baileysMod from '@whiskeysockets/baileys'
 import pino from 'pino'
 import fs from 'fs'
@@ -36,29 +37,78 @@ setInterval(async () => {
   } catch {}
 }, 3_600_000)
 
+process.on('unhandledRejection', (reason) => {
+  console.error(chalk.bold.red('[UNHANDLED REJECTION]'), reason?.stack || reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error(chalk.bold.red('[UNCAUGHT EXCEPTION]'), err?.stack || err)
+})
+
+// Servidor HTTP simple para responder a health checks de Railway / Render / Koyeb
+const PORT = process.env.PORT || 3000
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify({
+    status: 'ok',
+    bot: config.botName,
+    uptime: Math.floor(process.uptime()),
+  }))
+})
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(chalk.bold.cyan(`[HTTP] Servidor de salud activo en puerto ${PORT}`))
+}).on('error', (e) => {
+  console.log(chalk.yellow(`[HTTP] Servidor no pudo escuchar en ${PORT}: ${e.message}`))
+})
+
 let retryCount = 0
 function calcDelay() {
   return Math.min(5000 * 2 ** retryCount + Math.random() * 2000, 120_000)
 }
 
 async function getPairingNumber() {
-  const envNumber = process.env.WHATSAPP_NUMBER?.replace(/\D/g, '')
-  if (envNumber) return envNumber
+  let num = process.env.WHATSAPP_NUMBER?.replace(/\D/g, '')
+
+  // Si no se definió en env, revisar si se configuró un número válido en config.ownerNumber
+  if (!num) {
+    const owners = Array.isArray(config.ownerNumber) ? config.ownerNumber : [config.ownerNumber]
+    const validOwner = owners.find(o => o && !String(o).includes('X'))
+    if (validOwner) {
+      num = String(validOwner).replace(/\D/g, '')
+      console.log(chalk.bold.yellow(`[VINCULACIÓN] Usando número configurado en config.js: ${num}`))
+    }
+  }
 
   // Railway no permite responder preguntas interactivas desde sus logs.
-  if (!process.stdin.isTTY) {
+  if (!num && !process.stdin.isTTY) {
     throw new Error('No hay una sesión vinculada. Configurá WHATSAPP_NUMBER (sin +) en las variables del servicio y redesplegá.')
   }
 
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  const numero = await new Promise(res =>
-    rl.question(chalk.bold.yellowBright('\nINGRESA TU NÚMERO DE TELÉFONO (sin +): '), ans => {
-      rl.close()
-      res(ans.replace(/\D/g, ''))
-    })
-  )
-  if (!numero) throw new Error('El número de WhatsApp no puede estar vacío.')
-  return numero
+  if (!num) {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    num = await new Promise(res =>
+      rl.question(chalk.bold.yellowBright('\nINGRESA TU NÚMERO DE TELÉFONO (con código de país, sin +): '), ans => {
+        rl.close()
+        res(ans.replace(/\D/g, ''))
+      })
+    )
+  }
+
+  if (!num) throw new Error('El número de WhatsApp no puede estar vacío.')
+
+  // Normalizaciones críticas para México y formatos comunes:
+  // 1. Si pusieron 10 dígitos (número mexicano local sin código de país 52, ej. 2285117201)
+  if (num.length === 10) {
+    num = '52' + num
+    console.log(chalk.bold.cyan(`[VINCULACIÓN] Se agregaron dígitos de país (+52 México) al número -> ${num}`))
+  }
+  // 2. Si pusieron 13 dígitos con el '1' móvil de México (521XXXXXXXXXX -> 52XXXXXXXXXX)
+  // Baileys requiere exactamente 52 + 10 dígitos (12 dígitos) para que WhatsApp valide el código de emparejamiento
+  if (num.startsWith('521') && num.length === 13) {
+    num = '52' + num.slice(3)
+    console.log(chalk.bold.cyan(`[VINCULACIÓN] Normalizado formato móvil de México (521 -> 52) -> ${num}`))
+  }
+
+  return num
 }
 
 async function startBot() {
@@ -92,17 +142,26 @@ setWatchdogHandler(() => {
     conn.end(new Error('watchdog: reconexión forzada por timeouts repetidos'))
   })
 
+  let pairingRequested = false
   if (config.usePairingCode && !conn.authState.creds.registered) {
     const numero = await getPairingNumber()
     setTimeout(async () => {
+      if (pairingRequested || conn.authState.creds.registered) return
+      pairingRequested = true
       try {
+        console.log(chalk.bold.cyan(`[VINCULACIÓN] Solicitando código para: +${numero}...`))
         const raw = await conn.requestPairingCode(numero)
         const code = raw?.match(/.{1,4}/g)?.join('-') ?? raw
-        console.log(`\n${chalk.bold.yellowBright('CÓDIGO:')} ${chalk.bold.bgGreen.white(` ${code} `)}\n`)
+        console.log(`\n${chalk.bold.yellowBright('╔═════════════════════════════════════════╗')}`)
+        console.log(`${chalk.bold.yellowBright('║         CÓDIGO DE VINCULACIÓN           ║')}`)
+        console.log(`${chalk.bold.yellowBright('╚═════════════════════════════════════════╝')}`)
+        console.log(`\n  ${chalk.bold.bgGreen.white(`   ${code}   `)}\n`)
+        console.log(chalk.bold.greenBright(`👉 Ingresá este código en WhatsApp:`))
+        console.log(chalk.bold.white(`   Dispositivos vinculados > Vincular con número de teléfono (+${numero})\n`))
       } catch (e) {
         console.error(chalk.bold.red('Error al solicitar código:'), e.message)
       }
-    }, 3000)
+    }, 4000)
   }
 
   conn.ev.on('creds.update', saveCreds)
@@ -120,8 +179,24 @@ setWatchdogHandler(() => {
         console.log(chalk.bold.yellow(`[CONEXIÓN] Reintentando en ${Math.round(delay / 1000)}s...`))
         setTimeout(startBot, delay)
       } else {
-        console.log(chalk.bold.red('[CONEXIÓN] Sesión cerrada. Borrá la carpeta sessions/ y volvé a vincular.'))
-        process.exit(1)
+        console.log(chalk.bold.red('[CONEXIÓN] Sesión cerrada / inválida (401). Limpiando archivos de sesión corruptos...'))
+        try {
+          fs.rmSync(SESSION_PATH, { recursive: true, force: true })
+          fs.mkdirSync(SESSION_PATH, { recursive: true })
+          console.log(chalk.bold.green('[CONEXIÓN] Carpeta de sesión limpiada correctamente.'))
+        } catch (e) {
+          console.error('[CONEXIÓN] Error al limpiar carpeta de sesión:', e.message)
+        }
+
+        // Si falló antes de registrarse (error al vincular), reintentar limpio sin tumbar el contenedor.
+        // Esto previene que Railway entre en ciclo de crasheos continuos y detenga el servicio.
+        if (!conn.authState?.creds?.registered) {
+          console.log(chalk.bold.yellow('[CONEXIÓN] Reintentando vinculación limpia en 5 segundos...'))
+          setTimeout(startBot, 5000)
+        } else {
+          console.log(chalk.bold.red('[CONEXIÓN] Sesión desvinculada desde WhatsApp. Saliendo para reinicio limpio...'))
+          process.exit(1)
+        }
       }
     } else if (connection === 'open') {
       retryCount = 0

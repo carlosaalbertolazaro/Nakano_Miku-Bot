@@ -28,11 +28,13 @@ En **Service → Variables**, agregá:
 ```env
 NODE_ENV=production
 GROQ_API_KEY=tu_clave_de_groq
-WHATSAPP_NUMBER=tu_numero_sin_+
+GEMINI_API_KEY=tu_clave_de_gemini (opcional, respaldo)
+NVIDIA_API_KEY=tu_clave_de_nvidia (opcional, respaldo)
+WHATSAPP_NUMBER=tu_numero_con_codigo_de_pais (ej. 522285117201 en Mexico)
 RAILPACK_DEPLOY_APT_PACKAGES=ffmpeg
 ```
 
-`WHATSAPP_NUMBER` es el número de la cuenta que hará de bot y solo se necesita para la primera vinculación. `NVIDIA_API_KEY`, `ATERNOS_SERVER_HOST` y `ATERNOS_SERVER_PORT` siguen siendo opcionales.
+`WHATSAPP_NUMBER` es el número de la cuenta que hará de bot (con código de país, sin `+`, ej. `522285117201`) y solo se necesita para la primera vinculación. `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `ATERNOS_SERVER_HOST` y `ATERNOS_SERVER_PORT` siguen siendo opcionales.
 
 Railway usa **Railpack** por defecto. La variable `RAILPACK_DEPLOY_APT_PACKAGES` instala FFmpeg en la imagen final. El comando de inicio se detecta desde `package.json`; si Railway lo solicita, usá:
 
