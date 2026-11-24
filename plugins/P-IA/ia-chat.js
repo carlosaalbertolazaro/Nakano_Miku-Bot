@@ -28,10 +28,8 @@ const MAX_CONTEXT_LINE_LENGTH = 200 // trunca mensajes larguísimos antes de met
 // menos presente en modo normal.
 const SPONTANEOUS_CHANCE = 0.05
 const SPONTANEOUS_MIN_LENGTH = 8 // ignora mensajes muy cortos (evita ruido tipo "jaja", "ok")
-// 10s en vez de 4: en un grupo muy activo, contestar cada 4s sin parar
-// satura la conexión de WhatsApp (los envíos empiezan a colgarse y el bot
-// queda mudo para todo, no solo para la IA) — visto en vivo con Carlos.
-const CONSTANT_MODE_COOLDOWN_SEC = 10
+// 3s en vez de 10: responde rápido en modo constante sin silencios largos
+const CONSTANT_MODE_COOLDOWN_SEC = 3
 
 // "Relevante" = tiene al menos una letra de verdad. Filtra mensajes de solo
 // emojis/stickers/signos de puntuación (👍, 😂😂😂, "...") que antes también
@@ -115,14 +113,14 @@ async function responder(m, { rawText, apiPrompt, directo = false, model = MODEL
     // allowFallback: directo — el respaldo de NVIDIA (ver lib/ai.js) solo
     // tiene sentido cuando alguien está esperando una respuesta puntual
     // (mención/reply/DM/.ai), nunca en modo ambiental.
-    const respuesta = await askAI(apiPrompt || trimmed, history, model, maxTokens, systemInstruction, directo)
+    const respuesta = await askAI(apiPrompt || trimmed, history, model, maxTokens, systemInstruction)
     if (/^NOPE\b/i.test(respuesta.trim())) return // decidió no sumarse (solo puede pasar en modo ambiental)
 
     if (directo) pushHistory(jid, trimmed, respuesta)
     await m.reply(respuesta)
   } catch (e) {
-    if (!directo) return // en modos ambientales no se ensucia el grupo con errores técnicos
-    await m.reply(`*『 ❌ 』ERROR DE IA*\n> ${e.message}`)
+    console.error(chalk.bold.red(' [IA ERROR] '), e.stack || e.message)
+    if (directo) await m.reply(`*『 ❌ 』ERROR DE IA*\n> ${e.message}`)
   }
 }
 
@@ -143,7 +141,7 @@ const handler = async (m, { text }) => {
   // contexto grupal queda reservado para el modo espontáneo/constante, que
   // es donde realmente hace falta.
   const nombre = senderLabel(m)
-  const apiPrompt = `${nombre} te escribe${m.isGroup ? '' : ' por privado'}: ${text}`
+  const apiPrompt = m.isGroup ? `[${nombre}]: ${text}` : text
   await responder(m, { rawText: text, apiPrompt, model: MODEL_SMART, directo: true, systemInstruction: SYSTEM_INSTRUCTION_LITE })
 }
 
@@ -193,9 +191,7 @@ handler.all = async function (m, { conn, groupDb }) {
     // Mismo motivo que en el handler de arriba: sin contexto grupal acá,
     // para que responda solo a quien le habló y no a todo el chat.
     const nombre = senderLabel(m)
-    const apiPrompt = m.isGroup
-      ? `${nombre} te habla directamente (te mencionó o te respondió): ${body}`
-      : `${nombre} te escribe por privado: ${body}`
+    const apiPrompt = m.isGroup ? `[${nombre}]: ${body}` : body
     return responder(m, { rawText: body, apiPrompt, model: MODEL_SMART, directo: true, systemInstruction: SYSTEM_INSTRUCTION_LITE })
   }
 
@@ -223,13 +219,10 @@ handler.all = async function (m, { conn, groupDb }) {
     // el modelo responde más coherente con menos instrucción encima.
     const nombreActual = m.pushName || 'Alguien'
     const apiPrompt = `${buildContextBlock(m.chat, { excludeLast: true })}` +
-      `${nombreActual} ACABA DE ESCRIBIR AHORA MISMO: "${texto}"\n\n` +
-      `Estás participando activamente de esta conversación grupal como una persona más del chat — ` +
-      `nadie te habló a vos directamente, pero estás en la charla y sumás algo fluido (un comentario, ` +
-      `una reacción, una opinión con personalidad) a lo que ${nombreActual} acaba de decir AHORA, no a temas del ` +
-      `trasfondo de arriba. Respondé siempre, breve, suelta y sin sonar a robot.`
+      `[${nombreActual}]: ${texto}\n\n` +
+      `Estás charlando en este grupo de WhatsApp como una persona más. Meté un comentario corto, fluido y natural (con humor, sarcasmo o tu opinión libre) a lo que ${nombreActual} acaba de decir. Cero actitud de robot.`
 
-    return responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 120, systemInstruction: SYSTEM_INSTRUCTION_LITE })
+    return responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 150, systemInstruction: SYSTEM_INSTRUCTION_LITE })
   }
 
   // Modo normal: participación ocasional, puede "elegir" no decir nada. Usa
