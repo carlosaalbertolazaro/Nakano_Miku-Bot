@@ -12,11 +12,11 @@ import { startEventScheduler } from './lib/eventScheduler.js'
 import { startAiringScheduler } from './lib/animeAiringScheduler.js'
 import { startAternosScheduler } from './lib/aternosScheduler.js'
 import { setWatchdogHandler } from './lib/queue.js'
+import { SESSION_PATH } from './lib/storagePaths.js'
 
 const pkg = baileysMod.default && Object.keys(baileysMod).length === 1 ? baileysMod.default : baileysMod
 const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, Browsers } = pkg
 
-const SESSION_PATH = './sessions/main'
 const TMP_PATH = './tmp'
 
 if (!fs.existsSync(SESSION_PATH)) fs.mkdirSync(SESSION_PATH, { recursive: true })
@@ -39,6 +39,26 @@ setInterval(async () => {
 let retryCount = 0
 function calcDelay() {
   return Math.min(5000 * 2 ** retryCount + Math.random() * 2000, 120_000)
+}
+
+async function getPairingNumber() {
+  const envNumber = process.env.WHATSAPP_NUMBER?.replace(/\D/g, '')
+  if (envNumber) return envNumber
+
+  // Railway no permite responder preguntas interactivas desde sus logs.
+  if (!process.stdin.isTTY) {
+    throw new Error('No hay una sesión vinculada. Configurá WHATSAPP_NUMBER (sin +) en las variables del servicio y redesplegá.')
+  }
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  const numero = await new Promise(res =>
+    rl.question(chalk.bold.yellowBright('\nINGRESA TU NÚMERO DE TELÉFONO (sin +): '), ans => {
+      rl.close()
+      res(ans.replace(/\D/g, ''))
+    })
+  )
+  if (!numero) throw new Error('El número de WhatsApp no puede estar vacío.')
+  return numero
 }
 
 async function startBot() {
@@ -73,10 +93,7 @@ setWatchdogHandler(() => {
   })
 
   if (config.usePairingCode && !conn.authState.creds.registered) {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    const numero = await new Promise(res =>
-      rl.question(chalk.bold.yellowBright('\nINGRESA TU NÚMERO DE TELÉFONO (sin +): '), ans => { rl.close(); res(ans.replace(/\D/g, '')) })
-    )
+    const numero = await getPairingNumber()
     setTimeout(async () => {
       try {
         const raw = await conn.requestPairingCode(numero)

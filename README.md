@@ -39,6 +39,10 @@
 
 ---
 
+## ☁️ Desplegar en Railway
+
+Para desplegar desde GitHub con sesión y base de datos persistentes, seguí la [guía de Railway](DEPLOY_RAILWAY.md). Necesitás agregar un volumen en `/data` y configurar las variables indicadas ahí.
+
 ## 🚀 Instalación
 
 Miku está pensada para vivir **directamente en tu teléfono**, sin depender de una PC o VPS encendida 24/7. Hay dos formas de hostearla, con **Termux nativo como la recomendada**.
