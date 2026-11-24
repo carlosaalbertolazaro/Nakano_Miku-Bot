@@ -224,10 +224,10 @@ handler.all = async function (m, { conn, groupDb }) {
     const nombreActual = m.pushName || 'Alguien'
     const apiPrompt = `${buildContextBlock(m.chat, { excludeLast: true })}` +
       `${nombreActual} ACABA DE ESCRIBIR AHORA MISMO: "${texto}"\n\n` +
-      `Estás participando activamente de esta conversación grupal como una integrante más del chat — ` +
-      `nadie te habló a vos directamente, pero estás en "modo charla" y siempre sumás algo (una gracia, ` +
-      `una opinión corta, una reacción) a lo que ${nombreActual} acaba de decir AHORA, no a temas del ` +
-      `trasfondo de arriba (esos ya quedaron atrás). Respondé siempre, breve y natural.`
+      `Estás participando activamente de esta conversación grupal como una persona más del chat — ` +
+      `nadie te habló a vos directamente, pero estás en la charla y sumás algo fluido (un comentario, ` +
+      `una reacción, una opinión con personalidad) a lo que ${nombreActual} acaba de decir AHORA, no a temas del ` +
+      `trasfondo de arriba. Respondé siempre, breve, suelta y sin sonar a robot.`
 
     return responder(m, { rawText: body, apiPrompt, model: MODEL_FAST, maxTokens: 120, systemInstruction: SYSTEM_INSTRUCTION_LITE })
   }
@@ -246,15 +246,10 @@ handler.all = async function (m, { conn, groupDb }) {
   const nombreActual = m.pushName || 'Alguien'
   const apiPrompt = `${buildContextBlock(m.chat, { excludeLast: true })}` +
     `${nombreActual} ACABA DE ESCRIBIR AHORA MISMO: "${texto}"\n\n` +
-    `Estás mirando esta conversación grupal como una integrante más del chat — nadie te habló a vos directamente. ` +
-    `Si te parece natural sumar un comentario breve sobre lo que ${nombreActual} acaba de decir AHORA (una gracia, ` +
-    `una opinión corta, algo que aporte), respondé eso — no reacciones a temas del trasfondo de arriba, esos ya ` +
-    `quedaron atrás. Prohibido opinar, especular o hacer chistes sobre el estado de ánimo, carácter o comportamiento ` +
-    `de una persona puntual (nada de "fulano se ofendió", "alguien tiene mal día", etc.) — comentá el tema, nunca a ` +
-    `la gente, salvo que alguien te haya hablado a vos directamente o te haya faltado el respeto. ` +
-    `Si no tenés nada que aportar o no pega meterte ahora, respondé EXACTAMENTE la palabra NOPE y nada más.`
+    `Estás en este grupo de WhatsApp como una persona más. Si da meter un comentario corto, cómico, con onda o tu opinión sobre lo que ${nombreActual} acaba de decir AHORA, decilo con soltura y naturalidad. ` +
+    `Si no tenés nada que aportar o no da meterse ahora, respondé EXACTAMENTE la palabra NOPE y nada más.`
 
-  await responder(m, { rawText: body, apiPrompt, model: MODEL_SMART, maxTokens: 200 })
+  await responder(m, { rawText: body, apiPrompt, model: MODEL_SMART, maxTokens: 200, systemInstruction: SYSTEM_INSTRUCTION_LITE })
 }
 
 handler.help = ['ai <prompt>', 'ai olvidar']
