@@ -2,6 +2,7 @@ import { jidNormalizedUser } from '@whiskeysockets/baileys'
 import config from '../../config.js'
 import { askAI, MODEL_SMART, MODEL_FAST, SYSTEM_INSTRUCTION_LITE } from '../../lib/ai.js'
 import { aiCooldownCache, aiSpontaneousCooldownCache } from '../../lib/caches.js'
+import chalk from 'chalk'
 
 // Charla conversacional con IA (Groq). Formas de activarla:
 // 1. Comando explícito .ai/.miku.
