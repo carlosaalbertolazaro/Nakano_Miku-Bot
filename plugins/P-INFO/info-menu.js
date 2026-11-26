@@ -1,11 +1,13 @@
 import config from '../../config.js'
 import { plugins } from '../../handler.js'
 import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
+import { ROLEPLAY_ACTION_COUNT, ROLEPLAY_MENU_PAGES } from '../../lib/roleplayCatalog.js'
 
 const START_TIME = Date.now()
+const CATEGORY_PAGE_SIZE = 10
+export const MAX_IMAGE_CAPTION_LENGTH = 1024
 
-// Estas 6 URLs de ibb.co nunca cambian — se cachea el buffer una sola vez
-// (por URL) en vez de pedirle a Baileys que la baje de nuevo en cada .menu.
+// La imagen se cachea: el menú no vuelve a descargarla en cada consulta.
 const imageBufferCache = new Map()
 async function getRandomMenuImage() {
   if (!IMAGENES.length) return null
@@ -16,8 +18,6 @@ async function getRandomMenuImage() {
   return buffer
 }
 
-// Imágenes de Nakano Miku provistas por Carlos (ibb.co), verificadas (200 OK,
-// image/jpeg) antes de agregarlas.
 const IMAGENES = [
   'https://i.ibb.co/ZQRx7YG/09ed7487d4247be8c312d028b745bc6e.jpg',
   'https://i.ibb.co/G3byH4TP/37f2fc6336a20e75bd75d43656e6e2b0.jpg',
@@ -28,22 +28,27 @@ const IMAGENES = [
 ]
 
 const ETIQUETAS = {
-  info:          'ℹ️  Información',
-  group:         '👥 Gestión de Grupos',
+  info:          'ℹ️ Información',
+  group:         '👥 Grupos',
   tools:         '🔧 Herramientas',
   descargas:     '📥 Descargas',
   convertidores: '🔄 Convertidores',
-  juegos:        '🎮 Minijuegos',
-  economia:      '💰 Economía y Niveles',
-  anime:         '🌸 Anime y Gacha',
+  juegos:        '🎮 Juegos',
+  economia:      '💰 Economía',
+  anime:         '🌸 Anime',
   pokemon:       '🐾 Pokémon',
-  cartas:        '🃏 Cartas (Yu-Gi-Oh)',
+  cartas:        '🃏 Cartas',
   casino:        '🎰 Casino',
-  roleplay:      '💞 Rol / Interacción',
-  ia:            '🤖 Asistente IA',
+  roleplay:      '💞 Roleplay',
+  ia:            '🤖 IA',
   perfiles:      '🪪 Perfiles',
   stickers:      '🖼️ Stickers',
   otros:         '📦 Otros',
+}
+
+const COMANDO_CATEGORIA = {
+  group: 'grupos',
+  roleplay: 'rol',
 }
 
 const getTime = () => {
@@ -54,7 +59,9 @@ const getTime = () => {
 
 function getCategorias(isOwner, groupDb) {
   const categorias = {}
+  const conteos = {}
   let total = 0
+
   for (const p of Object.values(plugins)) {
     if (!p || !p.help) continue
     if ((p.owner || p.ownerOnly) && !isOwner) continue
@@ -63,17 +70,18 @@ function getCategorias(isOwner, groupDb) {
     if (groupDb?.disabledCategories?.includes(tag)) continue
     const cmdsReales = Array.isArray(p.command) ? p.command : [p.command]
     if (groupDb && cmdsReales.every(c => groupDb.disabledCmds?.includes(c))) continue
-    if (!categorias[tag]) categorias[tag] = []
+
     const cmds = Array.isArray(p.help) ? p.help : [p.help]
-    for (const cmd of cmds) { categorias[tag].push({ cmd, desc: p.desc || '' }); total++ }
+    const cantidad = p.menuCount ?? cmds.length
+    if (!categorias[tag]) categorias[tag] = []
+    conteos[tag] = (conteos[tag] || 0) + cantidad
+    total += cantidad
+    for (const cmd of cmds) categorias[tag].push({ cmd, desc: p.desc || '' })
   }
-  return { categorias, total }
+
+  return { categorias, conteos, total }
 }
 
-// Alias en español/inglés para poder pedir una categoría por NOMBRE
-// (".menu economia", ".help stickers") en vez de tener que acordarse el
-// número de página (.menu2, .menu3) — Carlos lo pidió explícitamente,
-// comparando con cómo funciona en Nekos Club.
 const ALIAS_CATEGORIA = {
   info: ['info', 'informacion'],
   group: ['group', 'grupo', 'grupos'],
@@ -88,7 +96,7 @@ const ALIAS_CATEGORIA = {
   anime: ['anime', 'gacha', 'waifu', 'waifus'],
   pokemon: ['pokemon'],
   cartas: ['cartas', 'yugioh', 'yugi'],
-  roleplay: ['roleplay', 'rol', 'interaccion'],
+  roleplay: ['roleplay', 'rol', 'interaccion', 'reacciones'],
   ia: ['ia', 'ai', 'asistente', 'miku'],
   otros: ['otros', 'other'],
 }
@@ -107,104 +115,148 @@ function resolverCategoriaPorNombre(nombre) {
 }
 
 function getOrdenActivo(isOwner, groupDb) {
-  const { categorias, total } = getCategorias(isOwner, groupDb)
+  const { categorias, conteos, total } = getCategorias(isOwner, groupDb)
   const orden = ['info', 'group', 'descargas', 'convertidores', 'stickers', 'juegos', 'economia', 'perfiles', 'casino', 'anime', 'pokemon', 'cartas', 'roleplay', 'ia', 'tools', 'otros']
   const ordenFinal = orden.filter(k => categorias[k]?.length).concat(
-    Object.keys(categorias).filter(k => !orden.includes(k))
+    Object.keys(categorias).filter(k => !orden.includes(k)),
   )
-  return { categorias, total, ordenFinal }
+  return { categorias, conteos, total, ordenFinal }
 }
 
-// Mensajes de texto plano únicamente. Los botones/listas nativas de WhatsApp
-// (nativeFlowMessage, buttons:[{sections}]) dejaron de ser confiables para
-// cuentas/números no verificados como negocio — a veces no responden al
-// toque, a veces el destinatario ve "mensaje no compatible con tu versión de
-// WhatsApp". Texto plano funciona siempre, sin importar la versión del
-// cliente. Los atajos .menu1..menu20 ya existían como comandos de texto.
-async function enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb) {
+function parsePage(value) {
+  return /^\d+$/.test(String(value || '')) && Number(value) > 0 ? Number(value) : 1
+}
+
+function resumirDescripcion(desc) {
+  const text = String(desc || '').replace(/\s+/g, ' ').trim()
+  return text.length > 110 ? `${text.slice(0, 107).trimEnd()}…` : text
+}
+
+function navigationFooter(prefix, tag, currentPage, pageCount) {
+  const lines = []
+  const categoryCommand = COMANDO_CATEGORIA[tag] || tag
+  if (currentPage > 1) lines.push(`◀️ *${prefix}menu ${categoryCommand} ${currentPage - 1}*`)
+  if (currentPage < pageCount) lines.push(`▶️ *${prefix}menu ${categoryCommand} ${currentPage + 1}*`)
+  lines.push(`🔙 *${prefix}menu*`)
+  return lines.map(line => `> ${line}`).join('\n')
+}
+
+export function buildMainMenu({ conteos, total, ordenFinal, nombreUsuario, currentBotName, prefix, uptime }) {
+  const listaCategorias = ordenFinal.map(tag => {
+    const nombreCat = ETIQUETAS[tag] || ETIQUETAS.otros
+    const categoryCommand = COMANDO_CATEGORIA[tag] || tag
+    return `▸ ${nombreCat} · ${conteos[tag] || 0} · *${prefix}menu ${categoryCommand}*`
+  }).join('\n')
+
+  return `*🤖 ${currentBotName} · MENÚ*\n` +
+    `Hola, *${nombreUsuario}* 👋\n\n` +
+    `📦 *${total} comandos* · Prefijo: *${prefix}*\n` +
+    `⏱️ *${uptime}* · 👑 ${config.ownerName}\n\n` +
+    `*Elegí una categoría:*\n${listaCategorias}\n\n` +
+    `💡 Ejemplo: *${prefix}menu rol* o directamente *${prefix}rol*.`
+}
+
+export function buildCategoryMenu({ tag, comandos, page = 1, prefix = '.' }) {
+  const pageCount = Math.max(1, Math.ceil(comandos.length / CATEGORY_PAGE_SIZE))
+  const currentPage = Math.min(Math.max(page, 1), pageCount)
+  const start = (currentPage - 1) * CATEGORY_PAGE_SIZE
+  const pageCommands = comandos.slice(start, start + CATEGORY_PAGE_SIZE)
+  const nombreCat = ETIQUETAS[tag] || ETIQUETAS.otros
+
+  const lines = pageCommands.map(({ cmd, desc }) => {
+    const description = resumirDescripcion(desc)
+    return `• *${prefix}${cmd}*${description ? `\n  ${description}` : ''}`
+  }).join('\n\n')
+
+  return `*${nombreCat.toUpperCase()} · ${currentPage}/${pageCount}*\n\n` +
+    `${lines}\n\n${navigationFooter(prefix, tag, currentPage, pageCount)}`
+}
+
+export function buildRoleplayMenu(page = 1, prefix = '.') {
+  const pageCount = ROLEPLAY_MENU_PAGES.length
+  const currentPage = Math.min(Math.max(page, 1), pageCount)
+  const data = ROLEPLAY_MENU_PAGES[currentPage - 1]
+  const lines = data.actions.map(aliases =>
+    `• ${aliases.map(command => `*${prefix}${command}*`).join(' / ')}`,
+  ).join('\n')
+
+  return `*${data.title.toUpperCase()}*\n` +
+    `*ROLEPLAY · ${currentPage}/${pageCount} · ${ROLEPLAY_ACTION_COUNT} acciones*\n\n` +
+    `${lines}\n\n` +
+    `> Para interactuar: *${prefix}kill @usuario* o respondé a un mensaje.\n` +
+    `> Las acciones individuales, como *${prefix}cry* o *${prefix}dance*, no necesitan mención.\n\n` +
+    navigationFooter(prefix, 'roleplay', currentPage, pageCount)
+}
+
+// Los submenús son texto simple: no dependen de una imagen ni del límite de
+// 1024 caracteres de los captions. La navegación por comandos funciona en
+// clientes donde las listas/botones nativos no son confiables.
+async function enviarSubmenu(m, tag, page, isOwner, usedPrefix, groupDb) {
   const { categorias } = getOrdenActivo(isOwner, groupDb)
   const comandos = categorias[tag]
   if (!comandos?.length) return m.reply(`*『 ❌ 』Sin comandos activos en esta categoría.*`)
 
-  const nombreCat = ETIQUETAS[tag] || ETIQUETAS.otros
   const prefix = usedPrefix || '.'
-
-  let caption = `*┏━━•❈ ${nombreCat.toUpperCase()} ❈•━━┓*\n\n`
-  for (const { cmd, desc } of comandos) {
-    caption += `✧ *${prefix}${cmd}*\n`
-    if (desc) caption += `   ${desc}\n`
-    caption += `\n`
-  }
-  caption += `*┗━━━━•❅•°•❈•°•❅•━━━━┛*\n\n`
-  caption += `> 🔙 Escribí *${prefix}menu* para volver al menú principal.`
-
-  const imageBuffer = await getRandomMenuImage()
-
-  if (imageBuffer) {
-    await conn.sendMessage(m.chat, { image: imageBuffer, caption }, { quoted: m })
-  } else {
-    await m.reply(caption)
-  }
+  if (tag === 'roleplay') return m.reply(buildRoleplayMenu(page, prefix))
+  return m.reply(buildCategoryMenu({ tag, comandos, page, prefix }))
 }
 
-const handler = async (m, { conn, usedPrefix, isOwner, command, args, groupDb }) => {
-  const { categorias, total, ordenFinal } = getOrdenActivo(isOwner, groupDb)
+const handler = async (m, { conn, usedPrefix = '.', isOwner, command = 'menu', args = [], groupDb }) => {
+  const { categorias, conteos, total, ordenFinal } = getOrdenActivo(isOwner, groupDb)
+  const prefix = usedPrefix || '.'
 
+  if (['roleplay', 'rol', 'reacciones'].includes(command)) {
+    return enviarSubmenu(m, 'roleplay', parsePage(args[0]), isOwner, prefix, groupDb)
+  }
+
+  // Compatibilidad con los atajos antiguos .menu1 ... .menu20.
   const numMatch = command.match(/^menu(\d+)$/)
   if (numMatch) {
-    const idx = parseInt(numMatch[1]) - 1
-    const tag = ordenFinal[idx]
-    if (tag) return enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb)
+    const tag = ordenFinal[Number(numMatch[1]) - 1]
+    if (tag) return enviarSubmenu(m, tag, 1, isOwner, prefix, groupDb)
     return m.reply(`*『 ❌ 』Categoría no encontrada.*`)
   }
 
-  // ".menu economia" / ".help stickers" — por nombre, no hace falta
-  // acordarse ningún número de página.
   if (args[0]) {
     const tag = resolverCategoriaPorNombre(args[0])
-    if (tag && categorias[tag]?.length) return enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb)
-    return m.reply(`*『 ❌ 』No encontré una categoría llamada "${args[0]}".*\n> Mirá los nombres disponibles con *${usedPrefix || '.'}menu*.`)
+    if (tag && categorias[tag]?.length) {
+      return enviarSubmenu(m, tag, parsePage(args[1]), isOwner, prefix, groupDb)
+    }
+    return m.reply(`*『 ❌ 』No encontré una categoría llamada "${args[0]}".*\n> Mirá las disponibles con *${prefix}menu*.`)
   }
 
-  const nombreUsuario = m.pushName || 'Usuario'
-  const prefix = usedPrefix || '.'
-  const currentBotName = conn.botname || config.botName
+  const textoMenu = buildMainMenu({
+    conteos,
+    total,
+    ordenFinal,
+    nombreUsuario: m.pushName || 'Usuario',
+    currentBotName: conn.botname || config.botName,
+    prefix,
+    uptime: getTime(),
+  })
 
-  const listaCategorias = ordenFinal.map((tag) => {
-    const nombreCat = ETIQUETAS[tag] || ETIQUETAS.otros
-    const n = categorias[tag]?.length || 0
-    return `> ${nombreCat} — ${n} comandos · escribí *${prefix}menu ${tag}*`
-  }).join('\n')
-
-  const textoMenu =
-`*┏━━•❈ 🤖 ${currentBotName} ❈•━━┓*
-
-> 👋 *Hola, ${nombreUsuario}*
-
-*『 📊 ESTADÍSTICAS 』*
-▢ 👑 *Creador:* ${config.ownerName}
-▢ ⚙️ *Prefijo:* [ *${prefix}* ]
-▢ ⏱️ *Activo:* ${getTime()}
-▢ 📦 *Comandos:* ${total}
-
-*『 📁 CATEGORÍAS 』*
-${listaCategorias}
-*┗━━━━•❅•°•❈•°•❅•━━━━┛*`
-
-  const imageBuffer = await getRandomMenuImage()
-
-  if (imageBuffer) {
-    await conn.sendMessage(m.chat, { image: imageBuffer, caption: textoMenu }, { quoted: m })
-  } else {
-    await m.reply(textoMenu)
+  // El caption anterior superaba 1024 caracteres y Baileys rechazaba todo el
+  // menú. Si futuras categorías vuelven a excederlo, se envía texto sin imagen.
+  if (textoMenu.length <= MAX_IMAGE_CAPTION_LENGTH) {
+    const imageBuffer = await getRandomMenuImage()
+    if (imageBuffer) {
+      try {
+        return await conn.sendMessage(m.chat, { image: imageBuffer, caption: textoMenu }, { quoted: m })
+      } catch (error) {
+        console.warn('[MENU] Falló la imagen; se enviará solo texto:', error.message)
+      }
+    }
   }
+
+  return m.reply(textoMenu)
 }
 
 handler.help = ['menu']
+handler.desc = 'Abrir el menú por categorías: .menu <categoría> [página].'
 handler.tags = ['info']
 handler.command = [
-  'menu', 'help', 'ayuda', 'menú',
-  ...Array.from({ length: 20 }, (_, i) => `menu${i + 1}`)
+  'menu', 'help', 'ayuda', 'comandos', 'roleplay', 'rol', 'reacciones',
+  ...Array.from({ length: 20 }, (_, i) => `menu${i + 1}`),
 ]
 
 export default handler
