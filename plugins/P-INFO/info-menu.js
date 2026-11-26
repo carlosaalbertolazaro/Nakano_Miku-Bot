@@ -1,32 +1,8 @@
 import config from '../../config.js'
 import { plugins } from '../../handler.js'
-import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 import { ROLEPLAY_ACTION_COUNT, ROLEPLAY_MENU_PAGES } from '../../lib/roleplayCatalog.js'
 
 const START_TIME = Date.now()
-
-// Estas 6 URLs de ibb.co nunca cambian — se cachea el buffer una sola vez
-// (por URL) en vez de pedirle a Baileys que la baje de nuevo en cada .menu.
-const imageBufferCache = new Map()
-async function getRandomMenuImage() {
-  if (!IMAGENES.length) return null
-  const url = IMAGENES[Math.floor(Math.random() * IMAGENES.length)]
-  if (imageBufferCache.has(url)) return imageBufferCache.get(url)
-  const buffer = await fetchImageBuffer(url)
-  if (buffer) imageBufferCache.set(url, buffer)
-  return buffer
-}
-
-// Imágenes de Nakano Miku provistas por Carlos (ibb.co), verificadas (200 OK,
-// image/jpeg) antes de agregarlas.
-const IMAGENES = [
-  'https://i.ibb.co/ZQRx7YG/09ed7487d4247be8c312d028b745bc6e.jpg',
-  'https://i.ibb.co/G3byH4TP/37f2fc6336a20e75bd75d43656e6e2b0.jpg',
-  'https://i.ibb.co/Pv7yCCgj/77739e7093a20cf6acdbb55ed94431b3.jpg',
-  'https://i.ibb.co/RTJx2GQb/66639a2c62e24b6433dab377a5661e84.jpg',
-  'https://i.ibb.co/5WqBpQ1f/4c5d5a900adcb5a7ff64dd3ff8d7d35c.jpg',
-  'https://i.ibb.co/9kjZrTHQ/abf465e6523544acbccb7bfad878be56-1.jpg',
-]
 
 const ETIQUETAS = {
   info:          'ℹ️  Información',
@@ -167,13 +143,7 @@ async function enviarSubmenu(conn, m, tag, isOwner, usedPrefix, groupDb, page = 
   caption += `*┗━━━━•❅•°•❈•°•❅•━━━━┛*\n\n`
   caption += `> 🔙 Escribí *${prefix}menu* para volver al menú principal.`
 
-  const imageBuffer = await getRandomMenuImage()
-
-  if (imageBuffer) {
-    await conn.sendMessage(m.chat, { image: imageBuffer, caption }, { quoted: m })
-  } else {
-    await m.reply(caption)
-  }
+  return m.reply(caption)
 }
 
 const handler = async (m, { conn, usedPrefix, isOwner, command, args, groupDb }) => {
@@ -224,13 +194,9 @@ const handler = async (m, { conn, usedPrefix, isOwner, command, args, groupDb })
 ${listaCategorias}
 *┗━━━━•❅•°•❈•°•❅•━━━━┛*`
 
-  const imageBuffer = await getRandomMenuImage()
-
-  if (imageBuffer) {
-    await conn.sendMessage(m.chat, { image: imageBuffer, caption: textoMenu }, { quoted: m })
-  } else {
-    await m.reply(textoMenu)
-  }
+  // El diseño detallado se conserva, pero se envía por el mismo canal de
+  // texto que los submenús para no depender del envío de imágenes.
+  return m.reply(textoMenu)
 }
 
 handler.help = ['menu']

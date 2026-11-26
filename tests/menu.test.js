@@ -15,14 +15,7 @@ after(() => {
   for (const cache of Object.values(caches)) cache.close()
 })
 
-test('el menú restaurado envía la foto y toda la información en el mismo mensaje', async t => {
-  const originalFetch = globalThis.fetch
-  t.after(() => { globalThis.fetch = originalFetch })
-  globalThis.fetch = async () => ({
-    ok: true,
-    arrayBuffer: async () => new Uint8Array([0xff, 0xd8, 0xff, 1, 2, 3]),
-  })
-
+test('el menú detallado responde por texto sin depender del envío de imágenes', async () => {
   const sent = []
   const replies = []
   const m = {
@@ -37,15 +30,42 @@ test('el menú restaurado envía la foto y toda la información en el mismo mens
 
   await menuHandler(m, { conn, usedPrefix: '.', isOwner: false, command: 'menu', args: [], groupDb: null })
 
-  assert.equal(sent.length, 1)
-  assert.equal(replies.length, 0)
-  assert.ok(Buffer.isBuffer(sent[0].image))
-  assert.equal(sent[0].image.subarray(0, 3).toString('hex'), 'ffd8ff')
-  assert.match(sent[0].caption, /^\*┏━━•❈ 🤖 Miku ❈•━━┓\*/)
-  assert.ok(sent[0].caption.includes('*『 📊 ESTADÍSTICAS 』*'))
-  assert.ok(sent[0].caption.includes('*Creador:*'))
-  assert.ok(sent[0].caption.includes('*Activo:*'))
-  assert.ok(sent[0].caption.includes('*『 📁 CATEGORÍAS 』*'))
+  assert.equal(sent.length, 0)
+  assert.equal(replies.length, 1)
+  assert.match(replies[0], /^\*┏━━•❈ 🤖 Miku ❈•━━┓\*/)
+  assert.ok(replies[0].includes('*『 📊 ESTADÍSTICAS 』*'))
+  assert.ok(replies[0].includes('*Creador:*'))
+  assert.ok(replies[0].includes('*Activo:*'))
+  assert.ok(replies[0].includes('*『 📁 CATEGORÍAS 』*'))
+})
+
+test('las categorías conservan su diseño y también responden sin imágenes', async t => {
+  plugins['test/info.js'] = {
+    help: ['ping'],
+    desc: 'Comprobar la latencia del bot.',
+    tags: ['info'],
+    command: ['ping'],
+  }
+  t.after(() => { delete plugins['test/info.js'] })
+  const sent = []
+  const replies = []
+  const m = { chat: 'test@s.whatsapp.net', reply: async text => replies.push(text) }
+  const conn = { sendMessage: async (_chat, payload) => sent.push(payload) }
+
+  await menuHandler(m, {
+    conn,
+    usedPrefix: '.',
+    isOwner: false,
+    command: 'menu',
+    args: ['info'],
+    groupDb: null,
+  })
+
+  assert.equal(sent.length, 0)
+  assert.equal(replies.length, 1)
+  assert.ok(replies[0].includes('INFORMACIÓN'))
+  assert.ok(replies[0].includes('✧ *.ping*'))
+  assert.ok(replies[0].includes('Comprobar la latencia del bot.'))
 })
 
 test('el menú de roleplay muestra cada comando una sola vez, incluidos kill y bleh', () => {
