@@ -1,13 +1,9 @@
 import assert from 'node:assert/strict'
-import { readFile, readdir } from 'node:fs/promises'
 import test, { after } from 'node:test'
 import * as caches from '../lib/caches.js'
+import { plugins } from '../handler.js'
 import roleplayHandler from '../plugins/P-ROLEPLAY/roleplay-actions.js'
-import menuHandler, {
-  buildCategoryMenu,
-  buildMainMenu,
-  buildRoleplayMenu,
-} from '../plugins/P-INFO/info-menu.js'
+import menuHandler, { buildRoleplayMenu } from '../plugins/P-INFO/info-menu.js'
 import {
   ACTIONS,
   ROLEPLAY_ACTION_COUNT,
@@ -15,119 +11,41 @@ import {
 } from '../lib/roleplayCatalog.js'
 
 // info-menu importa el índice del handler, cuyas cachés tienen temporizadores.
-// Se cierran al terminar para que `npm test` finalice sin forzar la salida.
 after(() => {
   for (const cache of Object.values(caches)) cache.close()
 })
 
-test('las seis fotos del menú están incluidas localmente y son JPEG válidos', async () => {
-  const directory = new URL('../assets/menu/', import.meta.url)
-  const files = (await readdir(directory)).filter(file => file.endsWith('.jpg')).sort()
-  assert.deepEqual(files, Array.from({ length: 6 }, (_, index) => `miku-${index + 1}.jpg`))
-
-  for (const file of files) {
-    const image = await readFile(new URL(file, directory))
-    assert.ok(image.length > 10000)
-    assert.equal(image.subarray(0, 3).toString('hex'), 'ffd8ff')
-  }
-})
-
-test('el menú principal se mantiene compacto y conserva todas las categorías', () => {
-  const tags = [
-    'info', 'group', 'descargas', 'convertidores', 'stickers', 'juegos',
-    'economia', 'perfiles', 'casino', 'anime', 'pokemon', 'cartas',
-    'roleplay', 'ia', 'tools', 'otros',
-  ]
-  const text = buildMainMenu({
-    conteos: Object.fromEntries(tags.map(tag => [tag, 99])),
-    total: 1584,
-    ordenFinal: tags,
-    nombreUsuario: 'Un usuario con un nombre bastante largo',
-    currentBotName: 'Nakano Miku Bot',
-    prefix: '.',
-    uptime: '999d 23h 59m 59s',
+test('el menú restaurado envía la foto y toda la información en el mismo mensaje', async t => {
+  const originalFetch = globalThis.fetch
+  t.after(() => { globalThis.fetch = originalFetch })
+  globalThis.fetch = async () => ({
+    ok: true,
+    arrayBuffer: async () => new Uint8Array([0xff, 0xd8, 0xff, 1, 2, 3]),
   })
 
-  assert.ok(text.length <= 2000, `Menú de ${text.length} caracteres`)
-  assert.ok(text.includes('*.menu rol*'))
-  assert.ok(text.includes('*.menu grupos*'))
-  assert.ok(text.includes('*『 📊 ESTADÍSTICAS 』*'))
-  assert.ok(text.includes('*Creador:*'))
-  assert.ok(text.includes('*Activo:*'))
-  assert.equal((text.match(/comandos\* · escribí/g) || []).length, tags.length)
-})
-
-test('el menú responde primero con texto aunque la foto decorativa quede pendiente', async () => {
+  const sent = []
   const replies = []
-  const events = []
-  let mediaCalls = 0
-  let notifyImageStarted
-  const imageStarted = new Promise(resolve => { notifyImageStarted = resolve })
   const m = {
-    chat: 'menu-imagen-pendiente@s.whatsapp.net',
+    chat: 'test@s.whatsapp.net',
     pushName: 'Carlos',
-    reply: async text => {
-      events.push('text')
-      replies.push(text)
-    },
+    reply: async text => replies.push(text),
   }
   const conn = {
     botname: 'Miku',
-    sendMessage: async (_chat, payload) => {
-      mediaCalls++
-      events.push('image')
-      assert.ok(Buffer.isBuffer(payload.image))
-      assert.equal(payload.image.subarray(0, 3).toString('hex'), 'ffd8ff')
-      notifyImageStarted()
-      await new Promise(() => {}) // Simula el envío de imagen que nunca responde.
-    },
+    sendMessage: async (_chat, payload) => sent.push(payload),
   }
-  const cases = [
-    ['menu', []],
-    ['help', []],
-    ['home', []],
-    ['inicio', []],
-    ['menu', ['home']],
-    ['menu', ['inicio']],
-  ]
 
-  for (const [command, args] of cases) {
-    await menuHandler(m, { conn, usedPrefix: '.', isOwner: false, command, args, groupDb: null })
-  }
-  let waitTimeout
-  await Promise.race([
-    imageStarted,
-    new Promise((_, reject) => {
-      waitTimeout = setTimeout(() => reject(new Error('No se intentó enviar la foto local.')), 1000)
-    }),
-  ]).finally(() => clearTimeout(waitTimeout))
+  await menuHandler(m, { conn, usedPrefix: '.', isOwner: false, command: 'menu', args: [], groupDb: null })
 
-  assert.equal(replies.length, cases.length)
-  assert.equal(mediaCalls, 1) // No se acumulan fotos colgadas en el mismo chat.
-  assert.equal(events[0], 'text')
-  assert.ok(events.includes('image'))
-  for (const reply of replies) assert.match(reply, /^\*┏━━•❈ 🤖 Miku ❈•━━┓\*/)
-  assert.ok(menuHandler.command.includes('home'))
-  assert.ok(menuHandler.command.includes('inicio'))
-})
-
-test('las categorías largas se dividen en páginas y acortan descripciones', () => {
-  const comandos = Array.from({ length: 23 }, (_, index) => ({
-    cmd: `comando${index}`,
-    desc: 'Descripción muy larga. '.repeat(12),
-  }))
-  const first = buildCategoryMenu({ tag: 'juegos', comandos, page: 1 })
-  const last = buildCategoryMenu({ tag: 'juegos', comandos, page: 3 })
-
-  assert.ok(first.includes('1/3'))
-  assert.ok(first.includes('*.comando0*'))
-  assert.ok(first.includes('*.comando9*'))
-  assert.ok(!first.includes('*.comando10*'))
-  assert.ok(first.includes('▶️ *.menu juegos 2*'))
-  assert.ok(last.includes('3/3'))
-  assert.ok(last.includes('*.comando20*'))
-  assert.ok(last.includes('*.comando22*'))
-  assert.ok(last.includes('…'))
+  assert.equal(sent.length, 1)
+  assert.equal(replies.length, 0)
+  assert.ok(Buffer.isBuffer(sent[0].image))
+  assert.equal(sent[0].image.subarray(0, 3).toString('hex'), 'ffd8ff')
+  assert.match(sent[0].caption, /^\*┏━━•❈ 🤖 Miku ❈•━━┓\*/)
+  assert.ok(sent[0].caption.includes('*『 📊 ESTADÍSTICAS 』*'))
+  assert.ok(sent[0].caption.includes('*Creador:*'))
+  assert.ok(sent[0].caption.includes('*Activo:*'))
+  assert.ok(sent[0].caption.includes('*『 📁 CATEGORÍAS 』*'))
 })
 
 test('el menú de roleplay muestra cada comando una sola vez, incluidos kill y bleh', () => {
@@ -146,6 +64,28 @@ test('el menú de roleplay muestra cada comando una sola vez, incluidos kill y b
   assert.ok(pages[2].includes('*.bleh* / *.lengua*'))
   assert.ok(pages[3].includes('*.nya*'))
   for (const page of pages) assert.ok(page.length < 2000)
+})
+
+test('rol sigue abriendo el listado independiente después de restaurar el menú', async t => {
+  plugins['test/roleplay.js'] = roleplayHandler
+  t.after(() => { delete plugins['test/roleplay.js'] })
+  const replies = []
+  const m = {
+    chat: 'test@s.whatsapp.net',
+    reply: async text => replies.push(text),
+  }
+
+  await menuHandler(m, {
+    conn: { botname: 'Miku' },
+    usedPrefix: '.',
+    isOwner: false,
+    command: 'rol',
+    args: ['2'],
+    groupDb: null,
+  })
+
+  assert.equal(replies.length, 1)
+  assert.ok(replies[0].includes('*.kill* / *.matar*'))
 })
 
 test('kill está registrado y explica cómo elegir el destinatario', async () => {
