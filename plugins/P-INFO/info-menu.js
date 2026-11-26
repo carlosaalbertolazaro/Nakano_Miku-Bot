@@ -1,31 +1,9 @@
 import config from '../../config.js'
 import { plugins } from '../../handler.js'
-import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 import { ROLEPLAY_ACTION_COUNT, ROLEPLAY_MENU_PAGES } from '../../lib/roleplayCatalog.js'
 
 const START_TIME = Date.now()
 const CATEGORY_PAGE_SIZE = 10
-export const MAX_IMAGE_CAPTION_LENGTH = 1024
-
-// La imagen se cachea: el menú no vuelve a descargarla en cada consulta.
-const imageBufferCache = new Map()
-async function getRandomMenuImage() {
-  if (!IMAGENES.length) return null
-  const url = IMAGENES[Math.floor(Math.random() * IMAGENES.length)]
-  if (imageBufferCache.has(url)) return imageBufferCache.get(url)
-  const buffer = await fetchImageBuffer(url)
-  if (buffer) imageBufferCache.set(url, buffer)
-  return buffer
-}
-
-const IMAGENES = [
-  'https://i.ibb.co/ZQRx7YG/09ed7487d4247be8c312d028b745bc6e.jpg',
-  'https://i.ibb.co/G3byH4TP/37f2fc6336a20e75bd75d43656e6e2b0.jpg',
-  'https://i.ibb.co/Pv7yCCgj/77739e7093a20cf6acdbb55ed94431b3.jpg',
-  'https://i.ibb.co/RTJx2GQb/66639a2c62e24b6433dab377a5661e84.jpg',
-  'https://i.ibb.co/5WqBpQ1f/4c5d5a900adcb5a7ff64dd3ff8d7d35c.jpg',
-  'https://i.ibb.co/9kjZrTHQ/abf465e6523544acbccb7bfad878be56-1.jpg',
-]
 
 const ETIQUETAS = {
   info:          'ℹ️ Información',
@@ -217,7 +195,7 @@ const handler = async (m, { conn, usedPrefix = '.', isOwner, command = 'menu', a
     return m.reply(`*『 ❌ 』Categoría no encontrada.*`)
   }
 
-  if (args[0]) {
+  if (args[0] && !['home', 'inicio', 'main'].includes(normalizar(args[0]))) {
     const tag = resolverCategoriaPorNombre(args[0])
     if (tag && categorias[tag]?.length) {
       return enviarSubmenu(m, tag, parsePage(args[1]), isOwner, prefix, groupDb)
@@ -235,19 +213,9 @@ const handler = async (m, { conn, usedPrefix = '.', isOwner, command = 'menu', a
     uptime: getTime(),
   })
 
-  // El caption anterior superaba 1024 caracteres y Baileys rechazaba todo el
-  // menú. Si futuras categorías vuelven a excederlo, se envía texto sin imagen.
-  if (textoMenu.length <= MAX_IMAGE_CAPTION_LENGTH) {
-    const imageBuffer = await getRandomMenuImage()
-    if (imageBuffer) {
-      try {
-        return await conn.sendMessage(m.chat, { image: imageBuffer, caption: textoMenu }, { quoted: m })
-      } catch (error) {
-        console.warn('[MENU] Falló la imagen; se enviará solo texto:', error.message)
-      }
-    }
-  }
-
+  // Texto directo, igual que los submenús y los errores que sí responden en
+  // WhatsApp. El envío de imagen podía quedar esperando indefinidamente y
+  // impedía mostrar incluso el fallback de texto.
   return m.reply(textoMenu)
 }
 
@@ -255,7 +223,7 @@ handler.help = ['menu']
 handler.desc = 'Abrir el menú por categorías: .menu <categoría> [página].'
 handler.tags = ['info']
 handler.command = [
-  'menu', 'help', 'ayuda', 'comandos', 'roleplay', 'rol', 'reacciones',
+  'menu', 'help', 'ayuda', 'comandos', 'home', 'inicio', 'roleplay', 'rol', 'reacciones',
   ...Array.from({ length: 20 }, (_, i) => `menu${i + 1}`),
 ]
 

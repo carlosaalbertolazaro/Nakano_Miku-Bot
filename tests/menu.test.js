@@ -2,11 +2,10 @@ import assert from 'node:assert/strict'
 import test, { after } from 'node:test'
 import * as caches from '../lib/caches.js'
 import roleplayHandler from '../plugins/P-ROLEPLAY/roleplay-actions.js'
-import {
+import menuHandler, {
   buildCategoryMenu,
   buildMainMenu,
   buildRoleplayMenu,
-  MAX_IMAGE_CAPTION_LENGTH,
 } from '../plugins/P-INFO/info-menu.js'
 import {
   ACTIONS,
@@ -20,7 +19,7 @@ after(() => {
   for (const cache of Object.values(caches)) cache.close()
 })
 
-test('el menú principal entra en un caption de WhatsApp y conserva todas las categorías', () => {
+test('el menú principal se mantiene compacto y conserva todas las categorías', () => {
   const tags = [
     'info', 'group', 'descargas', 'convertidores', 'stickers', 'juegos',
     'economia', 'perfiles', 'casino', 'anime', 'pokemon', 'cartas',
@@ -36,10 +35,45 @@ test('el menú principal entra en un caption de WhatsApp y conserva todas las ca
     uptime: '999d 23h 59m 59s',
   })
 
-  assert.ok(text.length <= MAX_IMAGE_CAPTION_LENGTH, `Caption de ${text.length} caracteres`)
+  assert.ok(text.length <= 1024, `Menú de ${text.length} caracteres`)
   assert.ok(text.includes('*.menu rol*'))
   assert.ok(text.includes('*.menu grupos*'))
   assert.equal((text.match(/▸/g) || []).length, tags.length)
+})
+
+test('el menú principal y sus accesos responden por texto sin llamar al envío de imagen', async () => {
+  const replies = []
+  let mediaCalls = 0
+  const m = {
+    chat: 'test@s.whatsapp.net',
+    pushName: 'Carlos',
+    reply: async text => replies.push(text),
+  }
+  const conn = {
+    botname: 'Miku',
+    sendMessage: async () => {
+      mediaCalls++
+      throw new Error('El menú no debería intentar enviar una imagen.')
+    },
+  }
+  const cases = [
+    ['menu', []],
+    ['help', []],
+    ['home', []],
+    ['inicio', []],
+    ['menu', ['home']],
+    ['menu', ['inicio']],
+  ]
+
+  for (const [command, args] of cases) {
+    await menuHandler(m, { conn, usedPrefix: '.', isOwner: false, command, args, groupDb: null })
+  }
+
+  assert.equal(mediaCalls, 0)
+  assert.equal(replies.length, cases.length)
+  for (const reply of replies) assert.match(reply, /^\*🤖 Miku · MENÚ\*/)
+  assert.ok(menuHandler.command.includes('home'))
+  assert.ok(menuHandler.command.includes('inicio'))
 })
 
 test('las categorías largas se dividen en páginas y acortan descripciones', () => {
