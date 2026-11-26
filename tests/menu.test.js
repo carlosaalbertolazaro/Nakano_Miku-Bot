@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile, readdir } from 'node:fs/promises'
 import test, { after } from 'node:test'
 import * as caches from '../lib/caches.js'
 import roleplayHandler from '../plugins/P-ROLEPLAY/roleplay-actions.js'
@@ -17,6 +18,18 @@ import {
 // Se cierran al terminar para que `npm test` finalice sin forzar la salida.
 after(() => {
   for (const cache of Object.values(caches)) cache.close()
+})
+
+test('las seis fotos del menú están incluidas localmente y son JPEG válidos', async () => {
+  const directory = new URL('../assets/menu/', import.meta.url)
+  const files = (await readdir(directory)).filter(file => file.endsWith('.jpg')).sort()
+  assert.deepEqual(files, Array.from({ length: 6 }, (_, index) => `miku-${index + 1}.jpg`))
+
+  for (const file of files) {
+    const image = await readFile(new URL(file, directory))
+    assert.ok(image.length > 10000)
+    assert.equal(image.subarray(0, 3).toString('hex'), 'ffd8ff')
+  }
 })
 
 test('el menú principal se mantiene compacto y conserva todas las categorías', () => {
@@ -44,17 +57,12 @@ test('el menú principal se mantiene compacto y conserva todas las categorías',
   assert.equal((text.match(/comandos\* · escribí/g) || []).length, tags.length)
 })
 
-test('el menú responde primero con texto aunque la foto decorativa quede pendiente', async t => {
-  const originalFetch = globalThis.fetch
-  t.after(() => { globalThis.fetch = originalFetch })
-  globalThis.fetch = async () => ({
-    ok: true,
-    arrayBuffer: async () => new Uint8Array([1, 2, 3]),
-  })
-
+test('el menú responde primero con texto aunque la foto decorativa quede pendiente', async () => {
   const replies = []
   const events = []
   let mediaCalls = 0
+  let notifyImageStarted
+  const imageStarted = new Promise(resolve => { notifyImageStarted = resolve })
   const m = {
     chat: 'menu-imagen-pendiente@s.whatsapp.net',
     pushName: 'Carlos',
@@ -68,7 +76,9 @@ test('el menú responde primero con texto aunque la foto decorativa quede pendie
     sendMessage: async (_chat, payload) => {
       mediaCalls++
       events.push('image')
-      assert.ok(payload.image)
+      assert.ok(Buffer.isBuffer(payload.image))
+      assert.equal(payload.image.subarray(0, 3).toString('hex'), 'ffd8ff')
+      notifyImageStarted()
       await new Promise(() => {}) // Simula el envío de imagen que nunca responde.
     },
   }
@@ -84,7 +94,13 @@ test('el menú responde primero con texto aunque la foto decorativa quede pendie
   for (const [command, args] of cases) {
     await menuHandler(m, { conn, usedPrefix: '.', isOwner: false, command, args, groupDb: null })
   }
-  await new Promise(resolve => setImmediate(resolve))
+  let waitTimeout
+  await Promise.race([
+    imageStarted,
+    new Promise((_, reject) => {
+      waitTimeout = setTimeout(() => reject(new Error('No se intentó enviar la foto local.')), 1000)
+    }),
+  ]).finally(() => clearTimeout(waitTimeout))
 
   assert.equal(replies.length, cases.length)
   assert.equal(mediaCalls, 1) // No se acumulan fotos colgadas en el mismo chat.
