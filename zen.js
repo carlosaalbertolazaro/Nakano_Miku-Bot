@@ -22,6 +22,7 @@ const TMP_PATH = './tmp'
 
 if (!fs.existsSync(SESSION_PATH)) fs.mkdirSync(SESSION_PATH, { recursive: true })
 if (!fs.existsSync(TMP_PATH)) fs.mkdirSync(TMP_PATH, { recursive: true })
+console.log(chalk.bold.cyan(`[ALMACENAMIENTO] Sesión de WhatsApp: ${SESSION_PATH}`))
 
 setInterval(async () => {
   if (!fs.existsSync(TMP_PATH)) return
@@ -113,6 +114,7 @@ async function getPairingNumber() {
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_PATH)
+  const hadRegisteredSession = Boolean(state.creds.registered)
   const { version } = await fetchLatestBaileysVersion()
   const logger = pino({ level: 'silent' })
 
@@ -178,25 +180,27 @@ setWatchdogHandler(() => {
         retryCount++
         console.log(chalk.bold.yellow(`[CONEXIÓN] Reintentando en ${Math.round(delay / 1000)}s...`))
         setTimeout(startBot, delay)
+      } else if (hadRegisteredSession || conn.authState?.creds?.registered) {
+        // Un 401 puede aparecer durante un redespliegue o si dos instancias
+        // compiten por las mismas credenciales. Borrar acá convertía cualquier
+        // fallo en una vinculación obligatoria nueva. Una sesión registrada
+        // solo se elimina manualmente cuando el usuario realmente la desvinculó.
+        console.log(chalk.bold.red('[CONEXIÓN] WhatsApp rechazó la sesión registrada (401). Los archivos se conservan; no se borrarán automáticamente.'))
+        console.log(chalk.bold.yellow('[CONEXIÓN] Verificá que haya una sola réplica usando esta sesión. Si la desvinculaste en WhatsApp, seguí la recuperación manual de DEPLOY_RAILWAY.md.'))
+        process.exit(1)
       } else {
-        console.log(chalk.bold.red('[CONEXIÓN] Sesión cerrada / inválida (401). Limpiando archivos de sesión corruptos...'))
+        // Durante el primer emparejamiento todavía no hay una sesión válida que
+        // preservar. Solo en ese caso se limpia el intento incompleto y se reintenta.
+        console.log(chalk.bold.yellow('[CONEXIÓN] El emparejamiento no llegó a registrarse. Limpiando únicamente ese intento incompleto...'))
         try {
           fs.rmSync(SESSION_PATH, { recursive: true, force: true })
           fs.mkdirSync(SESSION_PATH, { recursive: true })
-          console.log(chalk.bold.green('[CONEXIÓN] Carpeta de sesión limpiada correctamente.'))
+          console.log(chalk.bold.green('[CONEXIÓN] Intento de emparejamiento limpiado correctamente.'))
         } catch (e) {
-          console.error('[CONEXIÓN] Error al limpiar carpeta de sesión:', e.message)
+          console.error('[CONEXIÓN] Error al limpiar el intento de emparejamiento:', e.message)
         }
-
-        // Si falló antes de registrarse (error al vincular), reintentar limpio sin tumbar el contenedor.
-        // Esto previene que Railway entre en ciclo de crasheos continuos y detenga el servicio.
-        if (!conn.authState?.creds?.registered) {
-          console.log(chalk.bold.yellow('[CONEXIÓN] Reintentando vinculación limpia en 5 segundos...'))
-          setTimeout(startBot, 5000)
-        } else {
-          console.log(chalk.bold.red('[CONEXIÓN] Sesión desvinculada desde WhatsApp. Saliendo para reinicio limpio...'))
-          process.exit(1)
-        }
+        console.log(chalk.bold.yellow('[CONEXIÓN] Reintentando vinculación limpia en 5 segundos...'))
+        setTimeout(startBot, 5000)
       }
     } else if (connection === 'open') {
       retryCount = 0
