@@ -1,24 +1,64 @@
 import config from '../../config.js'
 import { plugins } from '../../handler.js'
+import { fetchImageBuffer } from '../../lib/sendImageSafe.js'
 import { ROLEPLAY_ACTION_COUNT, ROLEPLAY_MENU_PAGES } from '../../lib/roleplayCatalog.js'
 
 const START_TIME = Date.now()
 const CATEGORY_PAGE_SIZE = 10
 
+// La foto decorativa vuelve a formar parte del menú, pero se envía aparte y
+// después del texto. Si el proveedor o WhatsApp se cuelga, el menú ya llegó.
+const imageBufferCache = new Map()
+const imagenesPendientes = new Set()
+
+async function getRandomMenuImage() {
+  const url = IMAGENES[Math.floor(Math.random() * IMAGENES.length)]
+  if (imageBufferCache.has(url)) return imageBufferCache.get(url)
+  const buffer = await fetchImageBuffer(url)
+  if (buffer) imageBufferCache.set(url, buffer)
+  return buffer
+}
+
+async function enviarImagenMenu(conn, m) {
+  if (imagenesPendientes.has(m.chat)) return
+  imagenesPendientes.add(m.chat)
+  try {
+    const imageBuffer = await getRandomMenuImage()
+    if (!imageBuffer) return
+    await conn.sendMessage(m.chat, {
+      image: imageBuffer,
+      caption: `*🌸 ${conn.botname || config.botName}*`,
+    }, { quoted: m })
+  } catch (error) {
+    console.warn('[MENU] No se pudo enviar la foto decorativa:', error.message)
+  } finally {
+    imagenesPendientes.delete(m.chat)
+  }
+}
+
+const IMAGENES = [
+  'https://i.ibb.co/ZQRx7YG/09ed7487d4247be8c312d028b745bc6e.jpg',
+  'https://i.ibb.co/G3byH4TP/37f2fc6336a20e75bd75d43656e6e2b0.jpg',
+  'https://i.ibb.co/Pv7yCCgj/77739e7093a20cf6acdbb55ed94431b3.jpg',
+  'https://i.ibb.co/RTJx2GQb/66639a2c62e24b6433dab377a5661e84.jpg',
+  'https://i.ibb.co/5WqBpQ1f/4c5d5a900adcb5a7ff64dd3ff8d7d35c.jpg',
+  'https://i.ibb.co/9kjZrTHQ/abf465e6523544acbccb7bfad878be56-1.jpg',
+]
+
 const ETIQUETAS = {
   info:          'ℹ️ Información',
-  group:         '👥 Grupos',
+  group:         '👥 Gestión de Grupos',
   tools:         '🔧 Herramientas',
   descargas:     '📥 Descargas',
   convertidores: '🔄 Convertidores',
-  juegos:        '🎮 Juegos',
-  economia:      '💰 Economía',
-  anime:         '🌸 Anime',
+  juegos:        '🎮 Minijuegos',
+  economia:      '💰 Economía y Niveles',
+  anime:         '🌸 Anime y Gacha',
   pokemon:       '🐾 Pokémon',
-  cartas:        '🃏 Cartas',
+  cartas:        '🃏 Cartas (Yu-Gi-Oh)',
   casino:        '🎰 Casino',
-  roleplay:      '💞 Roleplay',
-  ia:            '🤖 IA',
+  roleplay:      '💞 Rol / Interacción',
+  ia:            '🤖 Asistente IA',
   perfiles:      '🪪 Perfiles',
   stickers:      '🖼️ Stickers',
   otros:         '📦 Otros',
@@ -123,15 +163,20 @@ export function buildMainMenu({ conteos, total, ordenFinal, nombreUsuario, curre
   const listaCategorias = ordenFinal.map(tag => {
     const nombreCat = ETIQUETAS[tag] || ETIQUETAS.otros
     const categoryCommand = COMANDO_CATEGORIA[tag] || tag
-    return `▸ ${nombreCat} · ${conteos[tag] || 0} · *${prefix}menu ${categoryCommand}*`
+    return `> ${nombreCat} — *${conteos[tag] || 0} comandos* · escribí *${prefix}menu ${categoryCommand}*`
   }).join('\n')
 
-  return `*🤖 ${currentBotName} · MENÚ*\n` +
-    `Hola, *${nombreUsuario}* 👋\n\n` +
-    `📦 *${total} comandos* · Prefijo: *${prefix}*\n` +
-    `⏱️ *${uptime}* · 👑 ${config.ownerName}\n\n` +
-    `*Elegí una categoría:*\n${listaCategorias}\n\n` +
-    `💡 Ejemplo: *${prefix}menu rol* o directamente *${prefix}rol*.`
+  return `*┏━━•❈ 🤖 ${currentBotName} ❈•━━┓*\n\n` +
+    `> 👋 *Hola, ${nombreUsuario}*\n\n` +
+    `*『 📊 ESTADÍSTICAS 』*\n` +
+    `▢ 👑 *Creador:* ${config.ownerName}\n` +
+    `▢ ⚙️ *Prefijo:* [ *${prefix}* ]\n` +
+    `▢ ⏱️ *Activo:* ${uptime}\n` +
+    `▢ 📦 *Comandos:* ${total}\n\n` +
+    `*『 📁 CATEGORÍAS 』*\n` +
+    `${listaCategorias}\n` +
+    `*┗━━━━•❅•°•❈•°•❅•━━━━┛*\n\n` +
+    `💡 También podés volver con *${prefix}home* o abrir roleplay directamente con *${prefix}rol*.`
 }
 
 export function buildCategoryMenu({ tag, comandos, page = 1, prefix = '.' }) {
@@ -213,10 +258,10 @@ const handler = async (m, { conn, usedPrefix = '.', isOwner, command = 'menu', a
     uptime: getTime(),
   })
 
-  // Texto directo, igual que los submenús y los errores que sí responden en
-  // WhatsApp. El envío de imagen podía quedar esperando indefinidamente y
-  // impedía mostrar incluso el fallback de texto.
-  return m.reply(textoMenu)
+  // El texto es la respuesta principal y nunca espera a la foto. El envío
+  // decorativo continúa en segundo plano con sus propios errores controlados.
+  await m.reply(textoMenu)
+  void enviarImagenMenu(conn, m)
 }
 
 handler.help = ['menu']

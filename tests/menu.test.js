@@ -35,25 +35,41 @@ test('el menú principal se mantiene compacto y conserva todas las categorías',
     uptime: '999d 23h 59m 59s',
   })
 
-  assert.ok(text.length <= 1024, `Menú de ${text.length} caracteres`)
+  assert.ok(text.length <= 2000, `Menú de ${text.length} caracteres`)
   assert.ok(text.includes('*.menu rol*'))
   assert.ok(text.includes('*.menu grupos*'))
-  assert.equal((text.match(/▸/g) || []).length, tags.length)
+  assert.ok(text.includes('*『 📊 ESTADÍSTICAS 』*'))
+  assert.ok(text.includes('*Creador:*'))
+  assert.ok(text.includes('*Activo:*'))
+  assert.equal((text.match(/comandos\* · escribí/g) || []).length, tags.length)
 })
 
-test('el menú principal y sus accesos responden por texto sin llamar al envío de imagen', async () => {
+test('el menú responde primero con texto aunque la foto decorativa quede pendiente', async t => {
+  const originalFetch = globalThis.fetch
+  t.after(() => { globalThis.fetch = originalFetch })
+  globalThis.fetch = async () => ({
+    ok: true,
+    arrayBuffer: async () => new Uint8Array([1, 2, 3]),
+  })
+
   const replies = []
+  const events = []
   let mediaCalls = 0
   const m = {
-    chat: 'test@s.whatsapp.net',
+    chat: 'menu-imagen-pendiente@s.whatsapp.net',
     pushName: 'Carlos',
-    reply: async text => replies.push(text),
+    reply: async text => {
+      events.push('text')
+      replies.push(text)
+    },
   }
   const conn = {
     botname: 'Miku',
-    sendMessage: async () => {
+    sendMessage: async (_chat, payload) => {
       mediaCalls++
-      throw new Error('El menú no debería intentar enviar una imagen.')
+      events.push('image')
+      assert.ok(payload.image)
+      await new Promise(() => {}) // Simula el envío de imagen que nunca responde.
     },
   }
   const cases = [
@@ -68,10 +84,13 @@ test('el menú principal y sus accesos responden por texto sin llamar al envío 
   for (const [command, args] of cases) {
     await menuHandler(m, { conn, usedPrefix: '.', isOwner: false, command, args, groupDb: null })
   }
+  await new Promise(resolve => setImmediate(resolve))
 
-  assert.equal(mediaCalls, 0)
   assert.equal(replies.length, cases.length)
-  for (const reply of replies) assert.match(reply, /^\*🤖 Miku · MENÚ\*/)
+  assert.equal(mediaCalls, 1) // No se acumulan fotos colgadas en el mismo chat.
+  assert.equal(events[0], 'text')
+  assert.ok(events.includes('image'))
+  for (const reply of replies) assert.match(reply, /^\*┏━━•❈ 🤖 Miku ❈•━━┓\*/)
   assert.ok(menuHandler.command.includes('home'))
   assert.ok(menuHandler.command.includes('inicio'))
 })
